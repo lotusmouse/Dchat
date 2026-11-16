@@ -324,3 +324,7 @@ html[data-ds-theme="dark"] #dshx-settings .ds-back,
 html[data-ds-theme="system"] #dshx-settings .ds-back {
   background: rgba(255, 255, 255, 0.12);
 }
+/* 打开设置不要有入场动画，避免闪一下 */
+#dshx-settings .ds-page {
+  animation: none !important;
+}
