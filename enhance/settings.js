@@ -10,7 +10,7 @@
   var X = window.__DSHXF;
   if (!X) return;
 
-  var VERSION = '2.7.4';
+  var VERSION = '2.8.1';
   var LS = {
     theme: 'chat-demo:theme-preference',
     locale: 'chat-demo:locale',
@@ -293,7 +293,7 @@
       section('数据',
         card(
           row({ icon: I.backup, label: '备份与恢复', act: 'nav', page: 'backup', value: '' }) +
-          row({ icon: I.data, label: '数据管理（导入 / 导出 / 清空）', act: 'official-data', value: '' })
+          row({ icon: I.data, label: '数据管理（导入 / 导出 / 清空）', act: 'nav', page: 'data', value: '' })
         )
       ) +
       section('关于',
@@ -513,6 +513,18 @@
     );
   };
 
+  pages.data = function () {
+    return (
+      '<div class="ds-page">' +
+      head('数据管理', { back: true }) +
+      '<div class="ds-scroll">' +
+      card(actionRow('导出全部对话', 'data-export') + actionRow('导入对话文件', 'data-import')) +
+      card(actionRow('清空全部对话', 'data-clear', { danger: true })) +
+      section('说明', card('<div class="ds-cell ds-note">对话存在本机 IndexedDB 里。导出的 JSON 含对话与摘要（不含图片附件）。清空不可恢复，建议先导出。</div>')) +
+      '</div></div>'
+    );
+  };
+
   pages.backup = function () {
     return (
       '<div class="ds-page">' +
@@ -693,6 +705,43 @@
     fileInput.addEventListener('change', onFilePicked);
     document.body.appendChild(fileInput);
     return fileInput;
+  }
+
+  var chatInput = null;
+
+  function pickChatFile() {
+    if (!chatInput) {
+      chatInput = document.createElement('input');
+      chatInput.type = 'file';
+      chatInput.accept = 'application/json,.json';
+      chatInput.style.display = 'none';
+      chatInput.addEventListener('change', function (ev) {
+        var f = ev.target.files && ev.target.files[0];
+        if (!f) return;
+        var rd = new FileReader();
+        rd.onload = function () {
+          try {
+            var obj = JSON.parse(String(rd.result));
+            X.importChats(obj)
+              .then(function () {
+                showToast('导入完成，正在刷新', 'ok');
+                setTimeout(function () {
+                  location.reload();
+                }, 700);
+              })
+              .catch(function (e) {
+                showToast(e && e.message ? e.message : '导入失败', 'err');
+              });
+          } catch (e) {
+            showToast('不是合法的 JSON 文件', 'err');
+          }
+        };
+        rd.readAsText(f);
+      });
+      document.body.appendChild(chatInput);
+    }
+    chatInput.value = '';
+    chatInput.click();
   }
 
   function pickBg() {
@@ -1164,40 +1213,6 @@
     }
     if (act === 'backup-export') return exportSettings();
     if (act === 'backup-import') return importSettings();
-
-    if (act === 'official-data' || act === 'official-general') {
-      var kind = act === 'official-data' ? 'data' : 'general';
-      var dlg = findOfficial();
-      if (dlg) {
-        var tab0 = officialTab(dlg, kind);
-        if (tab0) { try { tab0.click(); } catch (e) {} }
-        closeOverlay(true);
-        state.suppressUntil = Date.now() + 30000;
-        return;
-      }
-      // 官方弹窗还没出现：自己点一下官方的「设置」入口把它叫出来
-      var entry = findSettingsEntry();
-      if (!entry) return showToast('没找到官方设置入口', 'err');
-      state.suppressUntil = Date.now() + 30000;
-      state.allowOfficial = true;
-      try {
-        entry.click();
-      } catch (e) {}
-      setTimeout(function () {
-        var d2 = findOfficial();
-        if (!d2) {
-          state.allowOfficial = false;
-          return showToast('官方设置没打开，再点一次试试', 'err');
-        }
-        var t2 = officialTab(d2, kind);
-        if (t2) {
-          try { t2.click(); } catch (e) {}
-        }
-        closeOverlay(true);
-        state.suppressUntil = Date.now() + 30000;
-      }, 450);
-      return;
-    }
 
     if (act === 'nav-css') {
       state.stack.push('custom-css');
