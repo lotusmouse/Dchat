@@ -10,7 +10,7 @@
   var X = window.__DSHXF;
   if (!X) return;
 
-  var VERSION = '2.7.2';
+  var VERSION = '2.7.3';
   var LS = {
     theme: 'chat-demo:theme-preference',
     locale: 'chat-demo:locale',
@@ -793,14 +793,19 @@
   // 找到官方界面上那个「设置」入口元素（文字恰好是 设置 / Settings）
   function findSettingsEntry() {
     var all = document.querySelectorAll('body *');
+    var fallback = null;
     for (var i = 0; i < all.length; i++) {
       var el = all[i];
       if (el.closest && el.closest('#dshx-settings')) continue;
       if (el.children.length > 3) continue;
       var t = (el.textContent || '').trim();
-      if (t === '设置' || t === 'Settings') return el;
+      if (t !== '设置' && t !== 'Settings') continue;
+      // 隐藏的不算（比如被我们藏起来的官方弹窗里也有「设置」两个字）
+      if (!el.getClientRects().length) continue;
+      if (el.closest && el.closest('[class*="sider"]')) return el;
+      if (!fallback) fallback = el;
     }
-    return null;
+    return fallback;
   }
 
   function tabTexts(dlg) {
@@ -1167,17 +1172,24 @@
       // 官方弹窗还没出现：自己点一下官方的「设置」入口把它叫出来
       var entry = findSettingsEntry();
       if (!entry) return showToast('没找到官方设置入口', 'err');
-      state.suppressUntil = Date.now() + 8000;
-      state.allowOfficial = true;
-      closeOverlay(true);
       state.suppressUntil = Date.now() + 30000;
-      try { entry.click(); } catch (e) {}
+      state.allowOfficial = true;
+      try {
+        entry.click();
+      } catch (e) {}
       setTimeout(function () {
         var d2 = findOfficial();
-        if (!d2) return;
+        if (!d2) {
+          state.allowOfficial = false;
+          return showToast('官方设置没打开，再点一次试试', 'err');
+        }
         var t2 = officialTab(d2, kind);
-        if (t2) { try { t2.click(); } catch (e) {} }
-      }, 400);
+        if (t2) {
+          try { t2.click(); } catch (e) {}
+        }
+        closeOverlay(true);
+        state.suppressUntil = Date.now() + 30000;
+      }, 450);
       return;
     }
 
