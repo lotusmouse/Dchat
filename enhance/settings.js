@@ -10,7 +10,7 @@
   var X = window.__DSHXF;
   if (!X) return;
 
-  var VERSION = '2.3.1';
+  var VERSION = '2.3.3';
   var LS = {
     theme: 'chat-demo:theme-preference',
     locale: 'chat-demo:locale',
@@ -491,7 +491,7 @@
     var key = X.getKey();
     return (
       '<div class="ds-page">' +
-      head('API Key', { back: true }) +
+      head('API Key', { back: true, close: state.stack.length === 1 }) +
       '<div class="ds-scroll">' +
       card('<div class="ds-cell"><input id="ds-key" class="ds-in" type="password" autocomplete="off" spellcheck="false" placeholder="sk-…" value="' + esc(key) + '" /></div>') +
       card(actionRow('保存并验证', 'key-save') + (key ? actionRow('清除', 'key-clear', { danger: true }) : '')) +
@@ -576,7 +576,10 @@
     if (state.stack.length > 1) {
       state.stack.pop();
       render();
+      return;
     }
+    // 已经在最外层：返回 = 关掉（否则会卡在需要 Key 的那一页出不来）
+    closeOverlay();
   }
 
   /* ---------------- 官方设置探测 ---------------- */
@@ -871,6 +874,12 @@
               if (state.open) render();
             })
             .catch(function () {});
+          // 首次进来就是为了填 Key：存完直接回聊天，别把人留在这一页
+          if (state.stack.length === 1) {
+            setTimeout(function () {
+              if (state.open && state.stack.length === 1) closeOverlay();
+            }, 700);
+          }
         })
         .catch(function (e) {
           state.busy = false;
