@@ -10,7 +10,7 @@
   var X = window.__DSHXF;
   if (!X) return;
 
-  var VERSION = '2.4.3';
+  var VERSION = '2.5.0';
   var LS = {
     theme: 'chat-demo:theme-preference',
     locale: 'chat-demo:locale',
@@ -82,6 +82,8 @@
   }
 
   var I = {
+    image: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="1.6"/><path d="M4 17l5-5 4 4 3-3 4 4"/></svg>',
+    bubble: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20 12a7 7 0 0 1-7 7H8l-4 3V12a7 7 0 0 1 7-7h2a7 7 0 0 1 7 7z"/></svg>',
     key: ic('<circle cx="9" cy="12" r="3.2"/><path d="M12.2 12H20"/><path d="M17.2 12v2.6"/><path d="M14.4 12v2.6"/>'),
     prompt: ic('<path d="M4 6.5h16v9H9l-4 3v-3H4z"/>'),
     memory: ic('<path d="M7 4h10v16l-5-3.5L7 20z"/>'),
@@ -284,6 +286,8 @@
       section('外观',
         card(
           row({ icon: I.theme, label: '主题', act: 'nav', page: 'theme', value: theme }) +
+          row({ icon: I.image, label: '聊天背景图', act: 'nav', page: 'chat-bg', value: X.getChatBg() ? '已设置' : '未设置' }) +
+          row({ icon: I.bubble, label: '我的气泡颜色', act: 'nav', page: 'bubble', value: X.getBubbleColor() ? X.getBubbleColor() : '默认' }) +
           row({ icon: I.globe, label: '语言', act: 'nav', page: 'locale', value: locale }) +
           row({ icon: I.voice, label: '朗读音色', act: 'nav', page: 'tts-voice', value: voice })
         )
@@ -543,6 +547,54 @@
     ], 'opt-theme');
   };
 
+  pages['chat-bg'] = function () {
+    var bg = X.getChatBg();
+    return (
+      '<div class="ds-page">' +
+      head('聊天背景图', { back: true }) +
+      '<div class="ds-scroll">' +
+      (bg ? card('<div class="ds-cell"><img class="ds-bgprev" src="' + bg + '" alt="" /></div>') : '') +
+      card(
+        actionRow(bg ? '更换图片' : '上传图片', 'bg-pick') +
+        (bg ? actionRow('移除背景', 'bg-clear', { danger: true }) : '')
+      ) +
+      section('说明', card('<div class="ds-cell ds-note">图片会压缩后存在这台设备上，不会上传。只影响聊天区，顶栏和输入框不受影响。</div>')) +
+      '</div></div>'
+    );
+  };
+
+  pages.bubble = function () {
+    var cur = X.getBubbleColor() || '';
+    var list = [
+      ['', '默认'],
+      ['#dbeafe', '雾蓝'],
+      ['#d9f2ff', '天蓝'],
+      ['#dcfce7', '薄荷'],
+      ['#fde2e4', '樱粉'],
+      ['#fef3c7', '奶黄'],
+      ['#ede9fe', '香芋'],
+      ['#e5e7eb', '浅灰'],
+      ['#111827', '墨黑']
+    ];
+    var chips = list
+      .map(function (it) {
+        var on = cur === it[0];
+        return (
+          '<button class="ds-chip ds-chip-color' + (on ? ' ds-chip-on' : '') + '" data-act="opt-bubble" data-value="' + it[0] + '">' +
+          '<i style="background:' + (it[0] || '#fff') + '"></i><em>' + it[1] + '</em></button>'
+        );
+      })
+      .join('');
+    return (
+      '<div class="ds-page">' +
+      head('气泡颜色', { back: true }) +
+      '<div class="ds-scroll">' +
+      section('我的消息', card('<div class="ds-cell"><div class="ds-chips">' + chips + '</div></div>')) +
+      '<div class="ds-muted">只改你发出的气泡，助手的不受影响。</div>' +
+      '</div></div>'
+    );
+  };
+
   pages.locale = function () {
     return optionPage('语言', lsGet(LS.locale) || 'zh-CN', [
       { value: 'zh-CN', label: '简体中文' },
@@ -556,6 +608,58 @@
       { value: 'tide', label: '暗潮（男声）' }
     ], 'opt-voice');
   };
+
+  /* ---------------- 背景图选择 ---------------- */
+
+  var fileInput = null;
+
+  function ensureInput() {
+    if (fileInput) return fileInput;
+    fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/*';
+    fileInput.style.display = 'none';
+    fileInput.addEventListener('change', onFilePicked);
+    document.body.appendChild(fileInput);
+    return fileInput;
+  }
+
+  function pickBg() {
+    var inp = ensureInput();
+    inp.value = '';
+    inp.click();
+  }
+
+  function onFilePicked(ev) {
+    var file = ev.target.files && ev.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      var img = new Image();
+      img.onload = function () {
+        try {
+          var MAX = 1600;
+          var w = img.width;
+          var h = img.height;
+          var scale = Math.min(1, MAX / Math.max(w, h));
+          var cv = document.createElement('canvas');
+          cv.width = Math.round(w * scale);
+          cv.height = Math.round(h * scale);
+          cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+          var data = cv.toDataURL('image/jpeg', 0.82);
+          X.setChatBg(data);
+          render();
+          showToast('背景图已应用', 'ok');
+        } catch (e) {
+          showToast('图片处理失败，换一张试试', 'err');
+        }
+      };
+      img.onerror = function () { showToast('图片读不出来', 'err'); };
+      img.src = reader.result;
+    };
+    reader.onerror = function () { showToast('读取失败', 'err'); };
+    reader.readAsDataURL(file);
+  }
 
   /* ---------------- 渲染 ---------------- */
 
@@ -994,6 +1098,20 @@
       return;
     }
 
+    if (act === 'opt-bubble') {
+      X.setBubbleColor(value || '');
+      render();
+      return showToast('已更新气泡颜色', 'ok');
+    }
+    if (act === 'bg-pick') {
+      pickBg();
+      return;
+    }
+    if (act === 'bg-clear') {
+      X.setChatBg('');
+      render();
+      return showToast('已移除背景图', 'ok');
+    }
     if (act === 'opt-theme') {
       lsSet(LS.theme, value);
       return reload('主题');
