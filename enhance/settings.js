@@ -10,7 +10,7 @@
   var X = window.__DSHXF;
   if (!X) return;
 
-  var VERSION = '2.7.3';
+  var VERSION = '2.7.4';
   var LS = {
     theme: 'chat-demo:theme-preference',
     locale: 'chat-demo:locale',
@@ -1109,6 +1109,12 @@
               if (state.open) render();
             })
             .catch(function () {});
+          // 官方 bundle 把 Key 缓存在内存里，只有 reload 才会重读：存完直接刷新一次
+          setTimeout(function () {
+            try {
+              location.reload();
+            } catch (e) {}
+          }, 900);
           // 首次进来就是为了填 Key：存完直接回聊天，别把人留在这一页
           if (state.stack.length === 1) {
             setTimeout(function () {
