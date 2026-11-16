@@ -26,6 +26,7 @@
     autoMemory: true,
     autoCompress: true,
     compressedHashes: [],
+    compressAt: 100000,
     model: DEFAULT_MODEL,
     safety: 'standard',
     showUsage: true
@@ -127,6 +128,7 @@
   /* ---------------- 自定义 CSS ---------------- */
 
   var CSS_KEY = 'dshx:custom-css';
+  var CSS_AI_KEY = 'dshx:custom-css-ai';
 
   function getCustomCss() {
     return safeGet(CSS_KEY) || '';
@@ -138,19 +140,36 @@
     applyCustomCss();
   }
 
+  function getCustomCssAi() {
+    return safeGet(CSS_AI_KEY) || '';
+  }
+
+  function setCustomCssAi(v) {
+    if (v) safeSet(CSS_AI_KEY, v);
+    else safeRemove(CSS_AI_KEY);
+    applyCustomCss();
+  }
+
   function applyCustomCss() {
-    var css = getCustomCss();
-    var el = document.getElementById('dshx-custom-css');
-    if (!css) {
-      if (el) el.remove();
-      return;
+    var list = [
+      ['dshx-custom-css', getCustomCss()],
+      ['dshx-custom-css-ai', getCustomCssAi()]
+    ];
+    for (var i = 0; i < list.length; i++) {
+      var id = list[i][0];
+      var css = list[i][1];
+      var el = document.getElementById(id);
+      if (!css) {
+        if (el) el.remove();
+        continue;
+      }
+      if (!el) {
+        el = document.createElement('style');
+        el.id = id;
+        document.head.appendChild(el);
+      }
+      el.textContent = css;
     }
-    if (!el) {
-      el = document.createElement('style');
-      el.id = 'dshx-custom-css';
-      document.head.appendChild(el);
-    }
-    el.textContent = css;
   }
 
   function normalizeItem(it) {
@@ -181,6 +200,7 @@
           autoMemory: true,
           autoCompress: true,
           compressedHashes: old.compressedHashes,
+    compressAt: typeof old.compressAt === 'number' ? old.compressAt : 100000,
           model: old.model,
           safety: 'standard',
           showUsage: true
@@ -202,6 +222,7 @@
     s.showUsage = s.showUsage !== false;
     s.items = Array.isArray(s.items) ? s.items.map(normalizeItem).filter(Boolean) : [];
     s.compressedHashes = Array.isArray(s.compressedHashes) ? s.compressedHashes.filter(function (h) { return typeof h === 'string'; }) : [];
+    s.compressAt = Math.min(128000, Math.max(8000, Number(s.compressAt) || 100000));
     if (s.compressedHashes.length > 800) s.compressedHashes = s.compressedHashes.slice(-800);
     return s;
   }
@@ -836,7 +857,7 @@
     if (s.autoCompress) {
       var sent = api.lastCtx ? api.lastCtx.kept : 0;
       var tokens = api.lastCtx ? api.lastCtx.tokens : 0;
-      if (sent >= 40 || tokens >= 45000) {
+      if (tokens >= (s.compressAt || 100000)) {
         setTimeout(function () {
           compressNow().catch(function () {});
         }, 800);
@@ -891,6 +912,8 @@
     safety: safety,
     // 外观
     getCustomCss: getCustomCss,
+    getCustomCssAi: getCustomCssAi,
+    setCustomCssAi: setCustomCssAi,
     setCustomCss: setCustomCss,
     applyCustomCss: applyCustomCss,
     getChatBg: getChatBg,
