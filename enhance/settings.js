@@ -10,7 +10,7 @@
   var X = window.__DSHXF;
   if (!X) return;
 
-  var VERSION = '2.3.3';
+  var VERSION = '2.4.0';
   var LS = {
     theme: 'chat-demo:theme-preference',
     locale: 'chat-demo:locale',
@@ -27,6 +27,7 @@
     models: [],
     busy: false,
     toastTimer: 0,
+    suppressUntil: 0,
     lastMemAt: 0,
     lastMemOps: 0
   };
@@ -584,6 +585,32 @@
 
   /* ---------------- 官方设置探测 ---------------- */
 
+  // 把官方弹窗（连同全屏蒙版）藏起来；返回被藏的元素，方便还原
+  function hideOfficial(dlg) {
+    if (!dlg) return;
+    var hidden = state.officialHidden || (state.officialHidden = []);
+    try {
+      dlg.style.visibility = 'hidden';
+      if (hidden.indexOf(dlg) < 0) hidden.push(dlg);
+      var box = dlg.parentElement;
+      if (box && box !== document.body) {
+        var r = box.getBoundingClientRect();
+        if (r.width >= window.innerWidth * 0.9 && r.height >= window.innerHeight * 0.9) {
+          box.style.visibility = 'hidden';
+          if (hidden.indexOf(box) < 0) hidden.push(box);
+        }
+      }
+    } catch (e) {}
+  }
+
+  function showOfficial() {
+    var hidden = state.officialHidden || [];
+    for (var i = 0; i < hidden.length; i++) {
+      try { hidden[i].style.visibility = ''; } catch (e) {}
+    }
+    state.officialHidden = [];
+  }
+
   function tabTexts(dlg) {
     var out = [];
     var tabs = dlg.querySelectorAll('[role="tab"]');
@@ -722,18 +749,31 @@
     state.open = false;
     state.hidden = false;
     state.stack = ['root'];
+    state.suppressUntil = Date.now() + 2500;
     state.official = null;
     if (el) {
       el.classList.remove('ds-open');
       el.setAttribute('aria-hidden', 'true');
     }
+    showOfficial();
     if (!skipOfficialClose) closeOfficial(dlg);
+    // 官方「×」没生效时强制藏起来，绝不挡路
+    if (dlg) {
+      setTimeout(function () {
+        if (!state.open && dlg.isConnected) hideOfficial(dlg);
+      }, 500);
+    }
   }
 
   function check() {
     var dlg = findOfficial();
     if (dlg) {
       state.official = dlg;
+      if (Date.now() < state.suppressUntil) {
+        // 刚被用户关掉：官方那边又冒出来了也别接管，先藏住
+        hideOfficial(dlg);
+        return;
+      }
       try {
         dlg.style.visibility = 'hidden';
         // 官方弹窗外面还有一层全屏蒙版，一起藏掉，否则玻璃会透出一层灰
