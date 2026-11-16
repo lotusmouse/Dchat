@@ -892,7 +892,25 @@
   window.__DSHXF = api;
 
   // 官方 bundle 之后会用到 fetch，必须现在装好
-  installFetchProxy();
+
+  // 开机应用外观（气泡颜色 / 聊天背景）；官方 bundle 启动后可能重写 body 变量，补几次
+  function dshxReapply() {
+    try {
+      applyTheme();
+    } catch (e) {}
+  }
+  dshxReapply();
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', dshxReapply);
+  window.addEventListener('load', dshxReapply);
+  window.addEventListener('pageshow', dshxReapply);
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) dshxReapply();
+  });
+  setTimeout(dshxReapply, 400);
+  setTimeout(dshxReapply, 1500);
+  setTimeout(dshxReapply, 4000);
+
+    installFetchProxy();
 
   if (typeof module === 'object' && module.exports) module.exports = api;
 })();
