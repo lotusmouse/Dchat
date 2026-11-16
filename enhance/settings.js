@@ -10,7 +10,7 @@
   var X = window.__DSHXF;
   if (!X) return;
 
-  var VERSION = '2.4.1';
+  var VERSION = '2.4.2';
   var LS = {
     theme: 'chat-demo:theme-preference',
     locale: 'chat-demo:locale',
@@ -28,6 +28,7 @@
     busy: false,
     toastTimer: 0,
     suppressUntil: 0,
+    allowOfficial: false,
     lastMemAt: 0,
     lastMemOps: 0
   };
@@ -611,6 +612,19 @@
     state.officialHidden = [];
   }
 
+  // 找到官方界面上那个「设置」入口元素（文字恰好是 设置 / Settings）
+  function findSettingsEntry() {
+    var all = document.querySelectorAll('body *');
+    for (var i = 0; i < all.length; i++) {
+      var el = all[i];
+      if (el.closest && el.closest('#dshx-settings')) continue;
+      if (el.children.length > 3) continue;
+      var t = (el.textContent || '').trim();
+      if (t === '设置' || t === 'Settings') return el;
+    }
+    return null;
+  }
+
   function tabTexts(dlg) {
     var out = [];
     var tabs = dlg.querySelectorAll('[role="tab"]');
@@ -977,13 +991,27 @@
     if (act === 'backup-import') return importSettings();
 
     if (act === 'official-data' || act === 'official-general') {
-      var dlg = state.official || findOfficial();
-      if (!dlg) return showToast('没找到官方设置，请关掉重开一次', 'err');
-      var tab = officialTab(dlg, act === 'official-data' ? 'data' : 'general');
-      if (tab) {
-        try { tab.click(); } catch (e) {}
+      var kind = act === 'official-data' ? 'data' : 'general';
+      var dlg = findOfficial();
+      if (dlg) {
+        var tab0 = officialTab(dlg, kind);
+        if (tab0) { try { tab0.click(); } catch (e) {} }
+        hideOverlay();
+        return;
       }
+      // 官方弹窗还没出现：自己点一下官方的「设置」入口把它叫出来
+      var entry = findSettingsEntry();
+      if (!entry) return showToast('没找到官方设置入口', 'err');
+      state.suppressUntil = Date.now() + 8000;
+      state.allowOfficial = true;
       hideOverlay();
+      try { entry.click(); } catch (e) {}
+      setTimeout(function () {
+        var d2 = findOfficial();
+        if (!d2) return;
+        var t2 = officialTab(d2, kind);
+        if (t2) { try { t2.click(); } catch (e) {} }
+      }, 400);
       return;
     }
 
@@ -1173,6 +1201,34 @@
     pill.className = 'ds-usage';
     pill.setAttribute('aria-label', '本轮用量');
     document.body.appendChild(pill);
+
+    // 捕获阶段拦截官方「设置」入口：不弹官方的全屏设置，直接开我们的卡片
+    document.addEventListener(
+      'click',
+      function (e) {
+        if (state.allowOfficial) {
+          state.allowOfficial = false;
+          return;
+        }
+        if (state.open) return;
+        var node = e.target;
+        var hit = null;
+        while (node && node !== document.body) {
+          if (node.closest && node.closest('#dshx-settings')) return;
+          var txt = (node.textContent || '').trim();
+          if (txt === '设置' || txt === 'Settings') {
+            hit = node;
+            break;
+          }
+          node = node.parentElement;
+        }
+        if (!hit) return;
+        e.preventDefault();
+        e.stopPropagation();
+        openOverlay('standalone', null);
+      },
+      true
+    );
 
     el.addEventListener('click', onClick);
     el.addEventListener('input', onInput);
