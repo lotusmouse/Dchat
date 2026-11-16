@@ -10,7 +10,7 @@
   var X = window.__DSHXF;
   if (!X) return;
 
-  var VERSION = '2.7.1';
+  var VERSION = '2.7.2';
   var LS = {
     theme: 'chat-demo:theme-preference',
     locale: 'chat-demo:locale',
@@ -782,7 +782,10 @@
   function showOfficial() {
     var hidden = state.officialHidden || [];
     for (var i = 0; i < hidden.length; i++) {
-      try { hidden[i].style.removeProperty('display'); } catch (e) {}
+      try {
+        hidden[i].style.removeProperty('display');
+        hidden[i].style.removeProperty('visibility');
+      } catch (e) {}
     }
     state.officialHidden = [];
   }
@@ -916,7 +919,9 @@
         state.officialMask.style.visibility = '';
       } catch (e) {}
     }
-    state.hidden = true;
+    state.open = false;
+    state.hidden = false;
+    state.stack = ['root'];
     el.classList.remove('ds-open');
     el.setAttribute('aria-hidden', 'true');
   }
@@ -924,6 +929,11 @@
   function closeOverlay(skipOfficialClose) {
     var el = document.getElementById('dshx-settings');
     var dlg = state.official || findOfficial();
+    if (dlg) {
+      try {
+        dlg.style.removeProperty('visibility');
+      } catch (e) {}
+    }
     showOfficial();
     state.open = false;
     state.hidden = false;
@@ -1150,7 +1160,8 @@
       if (dlg) {
         var tab0 = officialTab(dlg, kind);
         if (tab0) { try { tab0.click(); } catch (e) {} }
-        hideOverlay();
+        closeOverlay(true);
+        state.suppressUntil = Date.now() + 30000;
         return;
       }
       // 官方弹窗还没出现：自己点一下官方的「设置」入口把它叫出来
@@ -1158,7 +1169,8 @@
       if (!entry) return showToast('没找到官方设置入口', 'err');
       state.suppressUntil = Date.now() + 8000;
       state.allowOfficial = true;
-      hideOverlay();
+      closeOverlay(true);
+      state.suppressUntil = Date.now() + 30000;
       try { entry.click(); } catch (e) {}
       setTimeout(function () {
         var d2 = findOfficial();
@@ -1423,7 +1435,7 @@
           state.allowOfficial = false;
           return;
         }
-        if (state.open) return;
+        if (state.open && !state.hidden) return;
         var node = e.target;
         var hit = null;
         while (node && node !== document.body) {
