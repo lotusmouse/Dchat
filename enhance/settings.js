@@ -10,7 +10,7 @@
   var X = window.__DSHXF;
   if (!X) return;
 
-  var VERSION = '2.5.3';
+  var VERSION = '2.6.0';
   var LS = {
     theme: 'chat-demo:theme-preference',
     locale: 'chat-demo:locale',
@@ -585,7 +585,30 @@
           )
       ) +
       section('我的气泡颜色', card('<div class="ds-cell"><div class="ds-chips">' + chips + '</div></div>')) +
+      section(
+        '自定义 CSS',
+        card(actionRow('编辑样式表', 'nav-css') + (X.getCustomCss() ? actionRow('清空自定义样式', 'css-clear', { danger: true }) : ''))
+      ) +
       '<div class="ds-muted">只改你发出的气泡，助手的不受影响。</div>' +
+      '</div></div>'
+    );
+  };
+
+  pages['custom-css'] = function () {
+    var css = X.getCustomCss();
+    var sample =
+      '/* 例：气泡渐变 + 大圆角 */\n' +
+      '#root .bubble-_4cfe7 {\n' +
+      '  background: linear-gradient(135deg, #e0e7ff, #f3e8ff) !important;\n' +
+      '  border-radius: 20px !important;\n' +
+      '}\n';
+    return (
+      '<div class="ds-page">' +
+      head('自定义 CSS', { back: true }) +
+      '<div class="ds-scroll">' +
+      card('<div class="ds-cell"><textarea id="ds-css" class="ds-ta ds-css-ta" spellcheck="false" placeholder="' + esc(sample) + '">' + esc(css) + '</textarea></div>') +
+      card(actionRow('保存并应用', 'css-save') + (css ? actionRow('清空', 'css-clear', { danger: true }) : '')) +
+      section('说明', card('<div class="ds-cell ds-note">这段 CSS 会插到页面最后，直接作用在真实界面上（不是隔离环境），写错会影响显示，清空即可恢复。<br>常用选择器：<code>#root .bubble-_4cfe7</code>（气泡）、<code>#root .main-_9fdf5</code>（聊天区）、<code>#root .sider-ac14ac</code>（侧栏）。</div>')) +
       '</div></div>'
     );
   };
@@ -1093,6 +1116,22 @@
       return;
     }
 
+    if (act === 'nav-css') {
+      state.stack.push('custom-css');
+      render();
+      return;
+    }
+    if (act === 'css-save') {
+      var ta0 = document.getElementById('ds-css');
+      if (!ta0) return;
+      X.setCustomCss(ta0.value);
+      return showToast(ta0.value.trim() ? '样式已应用' : '样式已清空', 'ok');
+    }
+    if (act === 'css-clear') {
+      X.setCustomCss('');
+      render();
+      return showToast('已清空自定义样式', 'ok');
+    }
     if (act === 'opt-bubble') {
       X.setBubbleColor(value || '');
       render();
