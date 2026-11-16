@@ -1,7 +1,7 @@
 {
-  "name": "DeepSeek",
-  "short_name": "DeepSeek",
-  "description": "本地运行的 DeepSeek 对话客户端，带可编辑提示词、记忆、上下文管理与模型切换。",
+  "name": "DChat",
+  "short_name": "DChat",
+  "description": "本地运行的 DChat 对话客户端，带可编辑提示词、记忆、上下文管理与模型切换。",
   "lang": "zh-CN",
   "start_url": "./",
   "scope": "./",
