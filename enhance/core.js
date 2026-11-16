@@ -916,6 +916,7 @@
     setCustomCssAi: setCustomCssAi,
     setCustomCss: setCustomCss,
     applyCustomCss: applyCustomCss,
+    hookInstalled: function () { return proxyInstalled; },
     getChatBg: getChatBg,
     setChatBg: setChatBg,
     getBubbleColor: getBubbleColor,
@@ -950,26 +951,33 @@
 
   window.__DSHXF = api;
 
-  // 官方 bundle 之后会用到 fetch，必须现在装好
+  // 先把 fetch 钩子装好：这是记忆 / 用量 / 压缩的入口，不能受后面任何初始化代码影响
+  installFetchProxy();
 
-  // 开机应用外观（气泡颜色 / 聊天背景）；官方 bundle 启动后可能重写 body 变量，补几次
-  function dshxReapply() {
-    try {
-      applyTheme();
-    } catch (e) {}
-  }
-  dshxReapply();
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', dshxReapply);
-  window.addEventListener('load', dshxReapply);
-  window.addEventListener('pageshow', dshxReapply);
-  document.addEventListener('visibilitychange', function () {
-    if (!document.hidden) dshxReapply();
-  });
-  setTimeout(dshxReapply, 400);
-  setTimeout(dshxReapply, 1500);
-  setTimeout(dshxReapply, 4000);
-
-    installFetchProxy();
+  // 外观初始化放最后，整段包住，出错也不影响上面
+  try {
+    if (typeof document !== 'undefined' && document.documentElement) {
+      var dshxReapply = function () {
+        try {
+          applyTheme();
+        } catch (e) {}
+      };
+      dshxReapply();
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', dshxReapply);
+      document.addEventListener('visibilitychange', function () {
+        try {
+          if (!document.hidden) dshxReapply();
+        } catch (e) {}
+      });
+      if (typeof window !== 'undefined') {
+        window.addEventListener('load', dshxReapply);
+        window.addEventListener('pageshow', dshxReapply);
+        setTimeout(dshxReapply, 400);
+        setTimeout(dshxReapply, 1500);
+        setTimeout(dshxReapply, 4000);
+      }
+    }
+  } catch (e) {}
 
   if (typeof module === 'object' && module.exports) module.exports = api;
 })();
