@@ -1,0 +1,976 @@
+/* 增强层设置页样式：iOS 分组列表（P2 风格）
+   全部作用域在 #dshx-settings / #dshx-toast / #dshx-usage 内，不污染官方 UI。 */
+
+#dshx-settings {
+  --ds-bg: #f2f2f7;
+  --ds-card: #ffffff;
+  --ds-fg: #0a0a0b;
+  --ds-fg2: #6d6d72;
+  --ds-fg3: #8e8e93;
+  --ds-sep: rgba(60, 60, 67, 0.16);
+  --ds-blue: #007aff;
+  --ds-red: #ff3b30;
+  --ds-fill: #e9e9ee;
+  --ds-chip: #eef0f4;
+
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  z-index: 2147483600;
+  display: none;
+  color: var(--ds-fg);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#dshx-settings.ds-open {
+  display: block;
+}
+
+html[data-ds-theme="dark"] #dshx-settings {
+  --ds-bg: #000000;
+  --ds-card: #1c1c1e;
+  --ds-fg: #ffffff;
+  --ds-fg2: #98989f;
+  --ds-fg3: #8e8e93;
+  --ds-sep: rgba(84, 84, 88, 0.6);
+  --ds-blue: #0a84ff;
+  --ds-red: #ff453a;
+  --ds-fill: #2c2c2e;
+  --ds-chip: #2c2c2e;
+}
+
+@media (prefers-color-scheme: dark) {
+  html[data-ds-theme="system"] #dshx-settings {
+    --ds-bg: #000000;
+    --ds-card: #1c1c1e;
+    --ds-fg: #ffffff;
+    --ds-fg2: #98989f;
+    --ds-fg3: #8e8e93;
+    --ds-sep: rgba(84, 84, 88, 0.6);
+    --ds-blue: #0a84ff;
+    --ds-red: #ff453a;
+    --ds-fill: #2c2c2e;
+    --ds-chip: #2c2c2e;
+  }
+}
+
+#dshx-settings .ds-host {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: var(--ds-bg);
+  overflow: hidden;
+}
+
+#dshx-settings .ds-page {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  padding-top: env(safe-area-inset-top);
+  animation: ds-page-in 0.2s ease both;
+}
+
+@keyframes ds-page-in {
+  from {
+    opacity: 0.4;
+    transform: translateX(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* 顶栏 */
+#dshx-settings .ds-head {
+  position: relative;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 50px;
+}
+
+#dshx-settings .ds-title {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+#dshx-settings .ds-close {
+  position: absolute;
+  right: 14px;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--ds-fill);
+  color: var(--ds-fg2);
+  font-size: 13px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+#dshx-settings .ds-back {
+  position: absolute;
+  left: 6px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ds-fg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+#dshx-settings .ds-back svg {
+  width: 22px;
+  height: 22px;
+}
+
+#dshx-settings .ds-head-sp {
+  position: absolute;
+  right: 14px;
+  width: 30px;
+  height: 30px;
+}
+
+/* 滚动区 */
+#dshx-settings .ds-scroll {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  overflow-x: hidden;
+  padding-bottom: calc(40px + env(safe-area-inset-bottom));
+}
+
+/* 分组 */
+#dshx-settings .ds-section {
+  margin-top: 22px;
+}
+
+#dshx-settings .ds-section-title {
+  margin: 0 20px 7px;
+  font-size: 13px;
+  color: var(--ds-fg2);
+  letter-spacing: 0.2px;
+}
+
+#dshx-settings .ds-card {
+  margin: 0 12px 8px;
+  background: var(--ds-card);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* 行 */
+#dshx-settings .ds-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 50px;
+  padding: 11px 14px;
+  border-bottom: 0.5px solid var(--ds-sep);
+  box-sizing: border-box;
+}
+
+#dshx-settings .ds-card > .ds-row:last-child,
+#dshx-settings .ds-card > :last-child > .ds-row:last-child {
+  border-bottom: 0;
+}
+
+#dshx-settings .ds-row[data-act] {
+  cursor: pointer;
+}
+
+#dshx-settings .ds-row[data-act]:active {
+  background: var(--ds-fill);
+}
+
+#dshx-settings .ds-icw {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ds-fg);
+}
+
+#dshx-settings .ds-ic {
+  width: 21px;
+  height: 21px;
+}
+
+#dshx-settings .ds-label {
+  flex: 1 1 auto;
+  font-size: 16px;
+  line-height: 1.35;
+  min-width: 0;
+}
+
+#dshx-settings .ds-label-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+#dshx-settings .ds-label-wrap em {
+  font-style: normal;
+  font-size: 12.5px;
+  color: var(--ds-fg3);
+  line-height: 1.4;
+}
+
+#dshx-settings .ds-text {
+  flex: 0 1 auto;
+  font-size: 15px;
+  color: var(--ds-fg3);
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#dshx-settings .ds-val {
+  flex: 0 1 auto;
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 15px;
+  color: var(--ds-fg3);
+}
+
+#dshx-settings .ds-chev {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 13px;
+  color: #c7c7cc;
+}
+
+html[data-ds-theme="dark"] #dshx-settings .ds-chev {
+  color: #5a5a5f;
+}
+
+#dshx-settings .ds-tick {
+  color: var(--ds-blue);
+  font-size: 17px;
+  font-weight: 600;
+}
+
+/* 操作行 */
+#dshx-settings .ds-action {
+  justify-content: center;
+  color: var(--ds-blue);
+  font-size: 16px;
+}
+
+#dshx-settings .ds-action .ds-label {
+  flex: 0 0 auto;
+  text-align: center;
+}
+
+#dshx-settings .ds-danger,
+#dshx-settings .ds-danger .ds-label {
+  color: var(--ds-red);
+}
+
+/* 单元格（输入/说明） */
+#dshx-settings .ds-cell {
+  padding: 12px 14px;
+}
+
+#dshx-settings .ds-note {
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--ds-fg2);
+}
+
+#dshx-settings .ds-note code {
+  font-family: "SF Mono", ui-monospace, Menlo, monospace;
+  font-size: 12.5px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: var(--ds-fill);
+  color: var(--ds-fg);
+}
+
+#dshx-settings .ds-empty {
+  font-size: 14px;
+  color: var(--ds-fg3);
+  line-height: 1.6;
+}
+
+#dshx-settings .ds-ta,
+#dshx-settings .ds-in {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 2px 0;
+  border: 0;
+  background: transparent;
+  color: var(--ds-fg);
+  font-family: inherit;
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+#dshx-settings .ds-ta {
+  min-height: 160px;
+  resize: vertical;
+}
+
+#dshx-settings .ds-ta:focus,
+#dshx-settings .ds-in:focus {
+  outline: 0;
+}
+
+#dshx-settings .ds-addrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#dshx-settings .ds-mini {
+  flex: 0 0 auto;
+  padding: 7px 14px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--ds-blue);
+  color: #fff;
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* 开关 */
+#dshx-settings .ds-switch {
+  position: relative;
+  flex: 0 0 auto;
+  width: 51px;
+  height: 31px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--ds-fill);
+  cursor: pointer;
+  transition: background 0.18s ease;
+}
+
+#dshx-settings .ds-switch i {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 27px;
+  height: 27px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.22);
+  transition: transform 0.18s ease;
+}
+
+#dshx-settings .ds-switch[aria-pressed="true"] {
+  background: #34c759;
+}
+
+#dshx-settings .ds-switch[aria-pressed="true"] i {
+  transform: translateX(20px);
+}
+
+/* 记忆条目 */
+#dshx-settings .ds-mem {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0 12px 8px;
+  padding: 10px 12px;
+  background: var(--ds-card);
+  border-radius: 12px;
+}
+
+#dshx-settings .ds-check {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  margin-top: 3px;
+  padding: 0;
+  border: 1.5px solid var(--ds-sep);
+  border-radius: 7px;
+  background: transparent;
+  position: relative;
+  cursor: pointer;
+}
+
+#dshx-settings .ds-check[aria-pressed="true"] {
+  border-color: var(--ds-blue);
+  background: var(--ds-blue);
+}
+
+#dshx-settings .ds-check[aria-pressed="true"]::after {
+  content: "";
+  position: absolute;
+  left: 7px;
+  top: 3px;
+  width: 5px;
+  height: 10px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+#dshx-settings .ds-mem-ta {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 40px;
+  padding: 2px 0;
+  border: 0;
+  background: transparent;
+  color: var(--ds-fg);
+  font-family: inherit;
+  font-size: 15.5px;
+  line-height: 1.5;
+  resize: none;
+}
+
+#dshx-settings .ds-mem-ta:focus {
+  outline: 0;
+}
+
+#dshx-settings .ds-x {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  margin-top: 2px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ds-fg3);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+#dshx-settings .ds-sum {
+  position: relative;
+  margin: 0 12px 8px;
+  padding: 12px 34px 12px 14px;
+  background: var(--ds-card);
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--ds-fg2);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+#dshx-settings .ds-sum .ds-x {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+}
+
+/* 用量 */
+#dshx-settings .ds-kv {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  border-bottom: 0.5px solid var(--ds-sep);
+  font-size: 15px;
+}
+
+#dshx-settings .ds-kv:last-child {
+  border-bottom: 0;
+}
+
+#dshx-settings .ds-kv b {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+#dshx-settings .ds-logrow {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 9px 14px;
+  border-bottom: 0.5px solid var(--ds-sep);
+  font-size: 13px;
+  color: var(--ds-fg2);
+  font-variant-numeric: tabular-nums;
+}
+
+#dshx-settings .ds-logrow:last-child {
+  border-bottom: 0;
+}
+
+#dshx-settings .ds-muted {
+  margin: 4px 20px 10px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ds-fg3);
+}
+
+/* chips / 分段 */
+#dshx-settings .ds-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 14px 10px;
+}
+
+#dshx-settings .ds-chip {
+  padding: 7px 12px;
+  border: 1px solid var(--ds-sep);
+  border-radius: 999px;
+  background: var(--ds-card);
+  color: var(--ds-fg);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+#dshx-settings .ds-chip-on {
+  border-color: var(--ds-blue);
+  background: var(--ds-blue);
+  color: #fff;
+}
+
+#dshx-settings .ds-seg {
+  display: flex;
+  gap: 6px;
+  padding: 10px 12px;
+}
+
+#dshx-settings .ds-segbtn {
+  flex: 1 1 0;
+  padding: 9px 8px;
+  border: 1px solid var(--ds-sep);
+  border-radius: 9px;
+  background: transparent;
+  color: var(--ds-fg2);
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+#dshx-settings .ds-seg-on {
+  border-color: var(--ds-blue);
+  color: var(--ds-blue);
+  font-weight: 600;
+}
+
+#dshx-settings .ds-foot {
+  margin: 18px 20px 0;
+  font-size: 12px;
+  color: var(--ds-fg3);
+  line-height: 1.6;
+  text-align: center;
+}
+
+#dshx-settings .ds-details {
+  margin: 10px 14px 0;
+  font-size: 13px;
+  color: var(--ds-fg2);
+}
+
+#dshx-settings .ds-details summary {
+  padding: 8px 0;
+  cursor: pointer;
+}
+
+#dshx-settings .ds-pre {
+  margin: 6px 0 0;
+  padding: 12px;
+  max-height: 240px;
+  overflow: auto;
+  border-radius: 10px;
+  background: var(--ds-card);
+  color: var(--ds-fg);
+  font-family: "SF Mono", ui-monospace, Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* 轻提示 */
+#dshx-toast {
+  position: fixed;
+  left: 50%;
+  top: calc(env(safe-area-inset-top) + 58px);
+  z-index: 2147483646;
+  transform: translate(-50%, -8px);
+  max-width: 86vw;
+  padding: 9px 14px;
+  border-radius: 12px;
+  background: rgba(28, 28, 30, 0.92);
+  color: #fff;
+  font-size: 13.5px;
+  line-height: 1.45;
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+#dshx-toast.ds-toast-on {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+#dshx-toast.ds-toast-err {
+  background: rgba(180, 38, 30, 0.95);
+}
+
+/* 每轮用量小条 */
+#dshx-usage {
+  position: fixed;
+  left: 50%;
+  top: calc(env(safe-area-inset-top) + 6px);
+  z-index: 2147483200;
+  transform: translateX(-50%);
+  display: none;
+  padding: 3px 9px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(120, 120, 128, 0.16);
+  color: #5b5b60;
+  font-size: 10.5px;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.2px;
+  cursor: pointer;
+  opacity: 0.85;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Mono", Menlo, monospace;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#dshx-usage.ds-usage-on {
+  display: block;
+}
+
+@media (prefers-color-scheme: dark) {
+  #dshx-usage {
+    background: rgba(120, 120, 128, 0.28);
+    color: #d1d1d6;
+  }
+}
+
+/* ========== 语音通话 ========== */
+
+/* 聊天页头部的通话按钮（位置跟随官方的「新对话」按钮计算） */
+#dshx-call-fab {
+  position: fixed;
+  z-index: 2147483100;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 50%;
+  background: #fff;
+  color: #1c1c1e;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html[data-ds-theme="dark"] #dshx-call-fab {
+  background: #1c1c1e;
+  color: #f2f2f7;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+#dshx-call-fab svg {
+  width: 18px;
+  height: 18px;
+  transform: rotate(135deg);
+}
+
+#dshx-call {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 2147483640;
+  display: none;
+  color: #111318;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#dshx-call.dc-open {
+  display: block;
+}
+
+#dshx-call .dc-sheet {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  padding: env(safe-area-inset-top) 20px calc(22px + env(safe-area-inset-bottom));
+}
+
+#dshx-call .dc-top {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 0;
+}
+
+#dshx-call .dc-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 104px;
+  height: 104px;
+  padding: 0;
+  border: 0;
+  border-radius: 26px;
+  overflow: hidden;
+  background: #f2f3f5;
+  box-shadow: 0 10px 30px rgba(20, 30, 50, 0.1);
+  cursor: pointer;
+}
+
+#dshx-call .dc-avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+#dshx-call .dc-name {
+  margin-top: 20px;
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+#dshx-call .dc-sub {
+  margin-top: 6px;
+  font-size: 14.5px;
+  color: #868d97;
+  min-height: 20px;
+}
+
+#dshx-call .dc-time {
+  margin-top: 2px;
+  font-size: 13px;
+  color: #aeb4bd;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.6px;
+}
+
+#dshx-call .dc-wave {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
+  margin-top: 14px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+#dshx-call .dc-wave-on {
+  opacity: 1;
+}
+
+#dshx-call .dc-wave i {
+  width: 3px;
+  height: 6px;
+  border-radius: 2px;
+  background: #34c759;
+}
+
+#dshx-call .dc-wave-on i {
+  animation: dc-bar 0.9s ease-in-out infinite;
+}
+
+#dshx-call .dc-wave i:nth-child(2) { animation-delay: 0.12s; }
+#dshx-call .dc-wave i:nth-child(3) { animation-delay: 0.24s; }
+#dshx-call .dc-wave i:nth-child(4) { animation-delay: 0.36s; }
+#dshx-call .dc-wave i:nth-child(5) { animation-delay: 0.48s; }
+
+@keyframes dc-bar {
+  0%, 100% { height: 6px; opacity: 0.55; }
+  50% { height: 18px; opacity: 1; }
+}
+
+#dshx-call .dc-caption {
+  flex: 0 0 auto;
+  min-height: 66px;
+  max-height: 116px;
+  margin: 10px 0 6px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  text-align: center;
+  font-size: 15.5px;
+  line-height: 1.62;
+  color: #8a9099;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+#dshx-call .dc-caption-on {
+  opacity: 1;
+}
+
+#dshx-call .dc-caption-user {
+  color: #111318;
+}
+
+#dshx-call .dc-controls {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 56px;
+  padding: 6px 0 4px;
+}
+
+#dshx-call .dc-ctl,
+#dshx-call .dc-hang {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #1c1c1e;
+  font-family: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#dshx-call .dc-ico-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: inherit;
+}
+
+#dshx-call .dc-ctl em,
+#dshx-call .dc-hang em {
+  font-style: normal;
+  font-size: 11.5px;
+  line-height: 1;
+  color: #8a9099;
+}
+
+#dshx-call .dc-ctl .dc-ico-wrap svg {
+  width: 27px;
+  height: 27px;
+}
+
+#dshx-call .dc-hang .dc-ico-wrap {
+  color: #ff3b30;
+}
+
+#dshx-call .dc-hang svg {
+  width: 29px;
+  height: 29px;
+  transform: rotate(135deg);
+}
+
+#dshx-call .dc-hang em {
+  color: #ff3b30;
+}
+
+#dshx-call .dc-ctl[aria-pressed="true"] .dc-ico-wrap,
+#dshx-call .dc-ctl[aria-pressed="true"] em {
+  color: #ff3b30;
+}
+
+#dshx-call .dc-ctl:active,
+#dshx-call .dc-hang:active {
+  transform: scale(0.94);
+}
+
+#dshx-call[data-phase="listening"] .dc-avatar {
+  box-shadow: 0 0 0 6px rgba(52, 199, 89, 0.14), 0 10px 30px rgba(20, 30, 50, 0.1);
+}
+
+#dshx-call[data-phase="speaking"] .dc-avatar {
+  box-shadow: 0 0 0 6px rgba(58, 109, 240, 0.14), 0 10px 30px rgba(20, 30, 50, 0.1);
+}
+
+#dshx-call[data-phase="thinking"] .dc-avatar {
+  box-shadow: 0 0 0 6px rgba(160, 166, 176, 0.16), 0 10px 30px rgba(20, 30, 50, 0.1);
+}
+
+/* 语音页：头像行 */
+#dshx-settings .ds-ava-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+}
+
+#dshx-settings .ds-ava {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  object-fit: cover;
+  background: var(--ds-fill);
+  flex: 0 0 auto;
+}
+
+#dshx-settings .ds-ava-txt {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+#dshx-settings .ds-ava-txt b {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+#dshx-settings .ds-ava-txt em {
+  font-style: normal;
+  font-size: 12.5px;
+  color: var(--ds-fg3);
+}
+/* 接管官方设置时不要播入场动画，避免"闪一下" */
+#dshx-settings.ds-instant .ds-page {
+  animation: none;
+}
