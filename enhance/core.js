@@ -91,6 +91,8 @@
   function applyTheme() {
     var root = document.documentElement;
     if (!root) return;
+    var body = document.body;
+
     var bg = getChatBg();
     if (bg) {
       root.style.setProperty('--dshx-chat-bg', 'url("' + bg + '")');
@@ -99,9 +101,23 @@
       root.style.removeProperty('--dshx-chat-bg');
       root.removeAttribute('data-dshx-bg');
     }
+
+    // 官方把主题变量定义在 body 上，所以必须同时写 body，否则 html 上的值会被 body 覆盖
     var bub = getBubbleColor();
-    if (bub) root.style.setProperty('--dsw-specific-bubble', bub);
-    else root.style.removeProperty('--dsw-specific-bubble');
+    var targets = [root, body];
+    for (var i = 0; i < targets.length; i++) {
+      var t = targets[i];
+      if (!t || !t.style) continue;
+      if (bub) t.style.setProperty('--dsw-specific-bubble', bub);
+      else t.style.removeProperty('--dsw-specific-bubble');
+    }
+    if (bub) {
+      root.style.setProperty('--dshx-bubble', bub);
+      root.setAttribute('data-dshx-bubble', '1');
+    } else {
+      root.style.removeProperty('--dshx-bubble');
+      root.removeAttribute('data-dshx-bubble');
+    }
   }
 
   function normalizeItem(it) {
