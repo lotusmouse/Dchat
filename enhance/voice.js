@@ -34,6 +34,27 @@
     return ICON_URL;
   }
 
+  // 图标文件缺失 / 加载失败时，退化成字母头像，不要显示裂图
+  function applyAvatar() {
+    var img = document.getElementById('dc-avatar-img');
+    if (!img) return;
+    var box = document.getElementById('dc-avatar');
+    if (box) {
+      var old = box.querySelector('.dc-avatar-letter');
+      if (old) old.remove();
+    }
+    img.style.display = '';
+    img.onerror = function () {
+      img.style.display = 'none';
+      if (!box || box.querySelector('.dc-avatar-letter')) return;
+      var span = document.createElement('span');
+      span.className = 'dc-avatar-letter';
+      span.textContent = 'DS';
+      box.appendChild(span);
+    };
+    img.src = avatarSrc();
+  }
+
   var state = {
     phase: 'idle', // idle | listening | transcribing | thinking | speaking | error | ended
     handsFree: true,
@@ -405,7 +426,7 @@
       '<button class="dc-avatar" id="dc-avatar" aria-label="点一下说话">' +
       '<img id="dc-avatar-img" src="' + avatarSrc() + '" alt="" />' +
       '</button>' +
-      '<div class="dc-name">DeepSeek</div>' +
+      '<div class="dc-name">DChat</div>' +
       '<div class="dc-sub" id="dc-sub">继续当前对话</div>' +
       '<div class="dc-time" id="dc-timer">00:00</div>' +
       '<div class="dc-wave" id="dc-wave"><i></i><i></i><i></i><i></i><i></i></div>' +
@@ -768,8 +789,7 @@
       return false;
     }
     buildUi();
-    var avImg = el('dc-avatar-img');
-    if (avImg) avImg.src = avatarSrc(); // 每次打开都同步一次本地头像
+    applyAvatar(); // 每次打开都同步一次头像（图标缺失会退化成字母）
     state.startedAt = Date.now();
     state.bubbles = [];
     state.ended = false;
@@ -845,10 +865,7 @@
     _debugBubble: addBubble,
     _ask: askInChat,
     _listen: startListening,
-    refreshAvatar: function () {
-      var img = el('dc-avatar-img');
-      if (img) img.src = avatarSrc();
-    },
+    refreshAvatar: applyAvatar,
     micState: micState,
     releaseMic: releaseMic,
     state: state
