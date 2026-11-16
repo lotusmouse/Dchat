@@ -274,3 +274,44 @@ html[data-ds-theme="system"] #dshx-settings .ds-close {
   background: rgba(17, 17, 20, 0.08);
   color: #55555a;
 }
+
+/* ---- 6. 设置页：弹出式卡片（不全屏），返回键做成圆形按钮 ---- */
+#dshx-settings {
+  box-sizing: border-box;
+  padding: calc(env(safe-area-inset-top) + 10px) 12px calc(env(safe-area-inset-bottom) + 12px);
+  background: rgba(17, 17, 20, 0.2);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+#dshx-settings .ds-host {
+  border-radius: 28px;
+  overflow: hidden;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.3);
+}
+
+#dshx-settings .ds-page {
+  padding-top: 0;
+}
+
+#dshx-settings .ds-scroll {
+  padding-bottom: calc(24px + env(safe-area-inset-bottom));
+}
+
+#dshx-settings .ds-back {
+  left: 12px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(17, 17, 20, 0.06);
+}
+
+#dshx-settings .ds-back svg {
+  width: 16px;
+  height: 16px;
+}
+
+html[data-ds-theme="dark"] #dshx-settings .ds-back,
+html[data-ds-theme="system"] #dshx-settings .ds-back {
+  background: rgba(255, 255, 255, 0.12);
+}
