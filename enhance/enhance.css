@@ -1005,3 +1005,8 @@ html[data-dshx-bg="1"] #root .main-_9fdf5 {
   vertical-align: -3px;
   border: 1px solid rgba(0, 0, 0, 0.1);
 }
+
+/* 气泡颜色的兜底覆盖（变量定义在 body 上，直接改属性更稳） */
+html[data-dshx-bubble="1"] #root .bubble-_4cfe7 {
+  background-color: var(--dshx-bubble) !important;
+}
