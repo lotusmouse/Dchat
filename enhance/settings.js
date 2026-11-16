@@ -10,7 +10,7 @@
   var X = window.__DSHXF;
   if (!X) return;
 
-  var VERSION = '2.4.2';
+  var VERSION = '2.4.3';
   var LS = {
     theme: 'chat-demo:theme-preference',
     locale: 'chat-demo:locale',
@@ -590,24 +590,24 @@
   function hideOfficial(dlg) {
     if (!dlg) return;
     var hidden = state.officialHidden || (state.officialHidden = []);
-    try {
-      dlg.style.visibility = 'hidden';
-      if (hidden.indexOf(dlg) < 0) hidden.push(dlg);
-      var box = dlg.parentElement;
-      if (box && box !== document.body) {
-        var r = box.getBoundingClientRect();
-        if (r.width >= window.innerWidth * 0.9 && r.height >= window.innerHeight * 0.9) {
-          box.style.visibility = 'hidden';
-          if (hidden.indexOf(box) < 0) hidden.push(box);
-        }
-      }
-    } catch (e) {}
+    var kill = function (el) {
+      try {
+        el.style.setProperty('display', 'none', 'important');
+        if (hidden.indexOf(el) < 0) hidden.push(el);
+      } catch (e) {}
+    };
+    kill(dlg);
+    var box = dlg.parentElement;
+    if (box && box !== document.body) {
+      var r = box.getBoundingClientRect();
+      if (r.width >= window.innerWidth * 0.9 && r.height >= window.innerHeight * 0.9) kill(box);
+    }
   }
 
   function showOfficial() {
     var hidden = state.officialHidden || [];
     for (var i = 0; i < hidden.length; i++) {
-      try { hidden[i].style.visibility = ''; } catch (e) {}
+      try { hidden[i].style.removeProperty('display'); } catch (e) {}
     }
     state.officialHidden = [];
   }
@@ -749,17 +749,7 @@
   function closeOverlay(skipOfficialClose) {
     var el = document.getElementById('dshx-settings');
     var dlg = state.official || findOfficial();
-    if (dlg) {
-      try {
-        dlg.style.visibility = '';
-      } catch (e) {}
-    }
-    if (state.officialMask) {
-      try {
-        state.officialMask.style.visibility = '';
-      } catch (e) {}
-      state.officialMask = null;
-    }
+    showOfficial();
     state.open = false;
     state.hidden = false;
     state.stack = ['root'];
@@ -800,18 +790,7 @@
         // 刚被用户关掉：官方那边又冒出来了也不接管，也不藏，让它自己在那
         return;
       }
-      try {
-        dlg.style.visibility = 'hidden';
-        // 官方弹窗外面还有一层全屏蒙版，一起藏掉，否则玻璃会透出一层灰
-        var box = dlg.parentElement;
-        if (box && box !== document.body) {
-          var r = box.getBoundingClientRect();
-          if (r.width >= window.innerWidth * 0.9 && r.height >= window.innerHeight * 0.9) {
-            box.style.visibility = 'hidden';
-            state.officialMask = box;
-          }
-        }
-      } catch (e) {}
+      hideOfficial(dlg);
       if (!state.open) {
         openOverlay('official', dlg);
         // 官方是从「没 Key 去上传/发送」这种入口打开的数据页，就直接落到 API Key 子页
