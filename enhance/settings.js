@@ -10,7 +10,7 @@
   var X = window.__DSHXF;
   if (!X) return;
 
-  var VERSION = '2.6.0';
+  var VERSION = '2.7.0';
   var LS = {
     theme: 'chat-demo:theme-preference',
     locale: 'chat-demo:locale',
@@ -401,6 +401,7 @@
       head('上下文与用量', { back: true }) +
       '<div class="ds-scroll">' +
       card(switchRow('自动压缩', 'autoCompress', s.autoCompress, '聊长了自动把旧消息压成摘要')) +
+      card(actionRow('压缩阈值', 'nav-compress-at', { value: fmt(s.compressAt) + ' tokens' })) +
       '<div class="ds-muted">' + esc(stat) + '</div>' +
       card(actionRow('立即压缩上下文', 'ctx-compress') + actionRow('清除压缩标记（重新发送完整历史）', 'ctx-reset')) +
       section('最近一轮',
@@ -587,9 +588,57 @@
       section('我的气泡颜色', card('<div class="ds-cell"><div class="ds-chips">' + chips + '</div></div>')) +
       section(
         '自定义 CSS',
-        card(actionRow('编辑样式表', 'nav-css') + (X.getCustomCss() ? actionRow('清空自定义样式', 'css-clear', { danger: true }) : ''))
+        card(
+          actionRow('我的气泡 CSS', 'nav-css', { value: X.getCustomCss() ? '已设置' : '默认' }) +
+            actionRow('助手气泡 CSS', 'nav-css-ai', { value: X.getCustomCssAi() ? '已设置' : '默认' }) +
+            (X.getCustomCss() || X.getCustomCssAi() ? actionRow('全部清空', 'css-clear', { danger: true }) : '')
+        )
       ) +
       '<div class="ds-muted">只改你发出的气泡，助手的不受影响。</div>' +
+      '</div></div>'
+    );
+  };
+
+  pages['compress-at'] = function () {
+    var s2 = X.getSettings();
+    var v = s2.compressAt || 100000;
+    var presets = [50000, 80000, 100000, 128000];
+    var chips = presets
+      .map(function (p) {
+        return (
+          '<button class="ds-chip' + (v === p ? ' ds-chip-on' : '') + '" data-act="compress-set" data-value="' + p + '">' + fmt(p) + '</button>'
+        );
+      })
+      .join('');
+    return (
+      '<div class="ds-page">' +
+      head('压缩阈值', { back: true }) +
+      '<div class="ds-scroll">' +
+      card('<div class="ds-cell"><input id="ds-cat" class="ds-in" type="number" inputmode="numeric" min="8000" max="128000" step="1000" value="' + v + '" /><div class="ds-muted" style="margin-top:8px">达到这个 token 数就压缩一次（只按上下文算，不看消息条数）。</div></div>') +
+      card(actionRow('保存', 'compress-save')) +
+      '<div class="ds-muted">常用值</div>' +
+      card('<div class="ds-cell"><div class="ds-chips">' + chips + '</div></div>') +
+      section('说明', card('<div class="ds-cell ds-note">DeepSeek 上下文是 128k。压缩时会保留最近 6 条原文，更早的压成一条摘要，本地记录不删。范围 8,000 – 128,000。</div>')) +
+      '</div></div>'
+    );
+  };
+
+  pages['custom-css-ai'] = function () {
+    var css = X.getCustomCssAi();
+    var sample =
+      '/* 例：给助手回复加一层柔和气泡 */\n' +
+      '#root .message-e1faee .ds-assistant-message-main-content {\n' +
+      '  background: rgba(255,255,255,.6);\n' +
+      '  border-radius: 18px;\n' +
+      '  padding: 12px 14px;\n' +
+      '}\n';
+    return (
+      '<div class="ds-page">' +
+      head('助手气泡 CSS', { back: true }) +
+      '<div class="ds-scroll">' +
+      card('<div class="ds-cell"><textarea id="ds-css-ai" class="ds-ta ds-css-ta" spellcheck="false" placeholder="' + esc(sample) + '">' + esc(css) + '</textarea></div>') +
+      card(actionRow('保存并应用', 'css-save-ai') + (css ? actionRow('清空', 'css-clear', { danger: true }) : '')) +
+      section('说明', card('<div class="ds-cell ds-note">留空就是默认样式。常用选择器：<code>#root .message-e1faee</code>（整条消息）、<code>#root .message-e1faee .ds-assistant-message-main-content</code>（正文容器）、<code>#root .ds-markdown</code>（正文排版）。</div>')) +
       '</div></div>'
     );
   };
@@ -1121,6 +1170,34 @@
       render();
       return;
     }
+    if (act === 'nav-css-ai') {
+      state.stack.push('custom-css-ai');
+      render();
+      return;
+    }
+    if (act === 'compress-set') {
+      X.saveSettings({ compressAt: Number(value) || 100000 });
+      render();
+      return showToast('阈值已改为 ' + fmt(Number(value)), 'ok');
+    }
+    if (act === 'nav-compress-at') {
+      state.stack.push('compress-at');
+      render();
+      return;
+    }
+    if (act === 'compress-save') {
+      var ci = document.getElementById('ds-cat');
+      var num = ci ? Number(ci.value) : 100000;
+      if (!num || num < 8000) return showToast('至少 8,000', 'err');
+      X.saveSettings({ compressAt: Math.min(128000, Math.round(num)) });
+      return showToast('阈值已保存', 'ok');
+    }
+    if (act === 'css-save-ai') {
+      var ta1 = document.getElementById('ds-css-ai');
+      if (!ta1) return;
+      X.setCustomCssAi(ta1.value);
+      return showToast(ta1.value.trim() ? '样式已应用' : '样式已清空', 'ok');
+    }
     if (act === 'css-save') {
       var ta0 = document.getElementById('ds-css');
       if (!ta0) return;
@@ -1128,6 +1205,7 @@
       return showToast(ta0.value.trim() ? '样式已应用' : '样式已清空', 'ok');
     }
     if (act === 'css-clear') {
+      X.setCustomCssAi('');
       X.setCustomCss('');
       render();
       return showToast('已清空自定义样式', 'ok');
