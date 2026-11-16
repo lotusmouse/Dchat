@@ -59,6 +59,51 @@
     }
   }
 
+  /* ---------------- 外观：聊天背景图 / 气泡颜色 ---------------- */
+
+  var BG_KEY = 'dshx:chat-bg';
+  var BUBBLE_KEY = 'dshx:bubble';
+
+  function getChatBg() {
+    return safeGet(BG_KEY) || '';
+  }
+
+  function setChatBg(v) {
+    if (v) safeSet(BG_KEY, v);
+    else safeRemove(BG_KEY);
+    applyTheme();
+  }
+
+  function getBubbleColor() {
+    return safeGet(BUBBLE_KEY) || '';
+  }
+
+  function setBubbleColor(v) {
+    if (v) safeSet(BUBBLE_KEY, v);
+    else safeRemove(BUBBLE_KEY);
+    applyTheme();
+  }
+
+  function safeRemove(key) {
+    try { localStorage.removeItem(key); } catch (e) {}
+  }
+
+  function applyTheme() {
+    var root = document.documentElement;
+    if (!root) return;
+    var bg = getChatBg();
+    if (bg) {
+      root.style.setProperty('--dshx-chat-bg', 'url("' + bg + '")');
+      root.setAttribute('data-dshx-bg', '1');
+    } else {
+      root.style.removeProperty('--dshx-chat-bg');
+      root.removeAttribute('data-dshx-bg');
+    }
+    var bub = getBubbleColor();
+    if (bub) root.style.setProperty('--dsw-specific-bubble', bub);
+    else root.style.removeProperty('--dsw-specific-bubble');
+  }
+
   function normalizeItem(it) {
     if (!it || typeof it !== 'object') return null;
     var text = typeof it.text === 'string' ? it.text : '';
@@ -795,6 +840,12 @@
     ctx: ctx,
     model: model,
     safety: safety,
+    // 外观
+    getChatBg: getChatBg,
+    setChatBg: setChatBg,
+    getBubbleColor: getBubbleColor,
+    setBubbleColor: setBubbleColor,
+    applyTheme: applyTheme,
     // 状态
     lastCtx: null,
     lastTurn: null,
