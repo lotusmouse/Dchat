@@ -10,7 +10,7 @@
   var X = window.__DSHXF;
   if (!X) return;
 
-  var VERSION = '2.5.2';
+  var VERSION = '2.5.3';
   var LS = {
     theme: 'chat-demo:theme-preference',
     locale: 'chat-demo:locale',
