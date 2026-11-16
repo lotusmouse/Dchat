@@ -10,7 +10,7 @@
   var X = window.__DSHXF;
   if (!X) return;
 
-  var VERSION = '2.7.0';
+  var VERSION = '2.7.1';
   var LS = {
     theme: 'chat-demo:theme-preference',
     locale: 'chat-demo:locale',
@@ -401,6 +401,10 @@
       head('上下文与用量', { back: true }) +
       '<div class="ds-scroll">' +
       card(switchRow('自动压缩', 'autoCompress', s.autoCompress, '聊长了自动把旧消息压成摘要')) +
+      card(
+        '<div class="ds-kv"><span>请求钩子</span><b>' + (X.hookInstalled() ? '已装' : '未装（记忆/用量不会工作）') + '</b></div>' +
+          '<div class="ds-kv"><span>自动记忆</span><b>' + (s.memoryEnabled ? '开' : '关') + '</b></div>'
+      ) +
       card(actionRow('压缩阈值', 'nav-compress-at', { value: fmt(s.compressAt) + ' tokens' })) +
       '<div class="ds-muted">' + esc(stat) + '</div>' +
       card(actionRow('立即压缩上下文', 'ctx-compress') + actionRow('清除压缩标记（重新发送完整历史）', 'ctx-reset')) +
