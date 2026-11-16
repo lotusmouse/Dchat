@@ -10,7 +10,7 @@
   var X = window.__DSHXF;
   if (!X) return;
 
-  var VERSION = '2.4.0';
+  var VERSION = '2.4.1';
   var LS = {
     theme: 'chat-demo:theme-preference',
     locale: 'chat-demo:locale',
@@ -749,20 +749,33 @@
     state.open = false;
     state.hidden = false;
     state.stack = ['root'];
-    state.suppressUntil = Date.now() + 2500;
+    state.suppressUntil = Date.now() + 1500;
     state.official = null;
     if (el) {
       el.classList.remove('ds-open');
       el.setAttribute('aria-hidden', 'true');
     }
     showOfficial();
-    if (!skipOfficialClose) closeOfficial(dlg);
-    // 官方「×」没生效时强制藏起来，绝不挡路
-    if (dlg) {
+    // 关官方弹窗：点「×」→ 点遮罩 → 发 Esc，三级尝试，保证它真的关掉
+    if (!skipOfficialClose) closeOfficialHard(dlg);
+  }
+
+  function closeOfficialHard(dlg) {
+    if (!dlg) return;
+    closeOfficial(dlg);
+    setTimeout(function () {
+      if (!dlg.isConnected) return;
+      try {
+        var mask = dlg.parentElement;
+        if (mask) mask.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      } catch (e) {}
       setTimeout(function () {
-        if (!state.open && dlg.isConnected) hideOfficial(dlg);
-      }, 500);
-    }
+        if (!dlg.isConnected) return;
+        try {
+          document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        } catch (e) {}
+      }, 220);
+    }, 140);
   }
 
   function check() {
@@ -770,8 +783,7 @@
     if (dlg) {
       state.official = dlg;
       if (Date.now() < state.suppressUntil) {
-        // 刚被用户关掉：官方那边又冒出来了也别接管，先藏住
-        hideOfficial(dlg);
+        // 刚被用户关掉：官方那边又冒出来了也不接管，也不藏，让它自己在那
         return;
       }
       try {
