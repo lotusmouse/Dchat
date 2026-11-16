@@ -974,3 +974,34 @@ html[data-ds-theme="dark"] #dshx-call-fab {
 #dshx-settings.ds-instant .ds-page {
   animation: none;
 }
+/* 图标缺失时的字母头像兜底 */
+#dshx-call .dc-avatar-letter {
+  font-size: 34px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  color: #111114;
+  line-height: 1;
+}
+/* ---------- 聊天背景图 / 气泡颜色 ---------- */
+html[data-dshx-bg="1"] #root .main-_9fdf5 {
+  background-image: var(--dshx-chat-bg);
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+}
+
+#dshx-settings .ds-bgprev {
+  width: 100%;
+  display: block;
+  border-radius: 12px;
+}
+
+#dshx-settings .ds-chip-color i {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 6px;
+  vertical-align: -3px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
