@@ -10,7 +10,7 @@
   var X = window.__DSHXF;
   if (!X) return;
 
-  var VERSION = '2.5.0';
+  var VERSION = '2.5.1';
   var LS = {
     theme: 'chat-demo:theme-preference',
     locale: 'chat-demo:locale',
@@ -286,8 +286,6 @@
       section('外观',
         card(
           row({ icon: I.theme, label: '主题', act: 'nav', page: 'theme', value: theme }) +
-          row({ icon: I.image, label: '聊天背景图', act: 'nav', page: 'chat-bg', value: X.getChatBg() ? '已设置' : '未设置' }) +
-          row({ icon: I.bubble, label: '我的气泡颜色', act: 'nav', page: 'bubble', value: X.getBubbleColor() ? X.getBubbleColor() : '默认' }) +
           row({ icon: I.globe, label: '语言', act: 'nav', page: 'locale', value: locale }) +
           row({ icon: I.voice, label: '朗读音色', act: 'nav', page: 'tts-voice', value: voice })
         )
@@ -540,31 +538,18 @@
   }
 
   pages.theme = function () {
-    return optionPage('主题', lsGet(LS.theme) || 'system', [
-      { value: 'light', label: '浅色' },
-      { value: 'dark', label: '深色' },
-      { value: 'system', label: '跟随系统' }
-    ], 'opt-theme');
-  };
-
-  pages['chat-bg'] = function () {
+    var cur = lsGet(LS.theme) || 'system';
     var bg = X.getChatBg();
-    return (
-      '<div class="ds-page">' +
-      head('聊天背景图', { back: true }) +
-      '<div class="ds-scroll">' +
-      (bg ? card('<div class="ds-cell"><img class="ds-bgprev" src="' + bg + '" alt="" /></div>') : '') +
-      card(
-        actionRow(bg ? '更换图片' : '上传图片', 'bg-pick') +
-        (bg ? actionRow('移除背景', 'bg-clear', { danger: true }) : '')
-      ) +
-      section('说明', card('<div class="ds-cell ds-note">图片会压缩后存在这台设备上，不会上传。只影响聊天区，顶栏和输入框不受影响。</div>')) +
-      '</div></div>'
-    );
-  };
-
-  pages.bubble = function () {
-    var cur = X.getBubbleColor() || '';
+    var bub = X.getBubbleColor() || '';
+    var themeRows = [
+      ['light', '浅色'],
+      ['dark', '深色'],
+      ['system', '跟随系统']
+    ]
+      .map(function (o) {
+        return optionRow(o[1], o[0] === cur, 'opt-theme', o[0]);
+      })
+      .join('');
     var list = [
       ['', '默认'],
       ['#dbeafe', '雾蓝'],
@@ -578,7 +563,7 @@
     ];
     var chips = list
       .map(function (it) {
-        var on = cur === it[0];
+        var on = bub === it[0];
         return (
           '<button class="ds-chip ds-chip-color' + (on ? ' ds-chip-on' : '') + '" data-act="opt-bubble" data-value="' + it[0] + '">' +
           '<i style="background:' + (it[0] || '#fff') + '"></i><em>' + it[1] + '</em></button>'
@@ -587,9 +572,19 @@
       .join('');
     return (
       '<div class="ds-page">' +
-      head('气泡颜色', { back: true }) +
+      head('主题', { back: true }) +
       '<div class="ds-scroll">' +
-      section('我的消息', card('<div class="ds-cell"><div class="ds-chips">' + chips + '</div></div>')) +
+      section('外观', card(themeRows)) +
+      '<div class="ds-muted">切换外观后会刷新页面以生效。</div>' +
+      section(
+        '聊天背景',
+        (bg ? card('<div class="ds-cell"><img class="ds-bgprev" src="' + bg + '" alt="" /></div>') : '') +
+          card(
+            actionRow(bg ? '更换背景图' : '上传背景图', 'bg-pick') +
+              (bg ? actionRow('移除背景图', 'bg-clear', { danger: true }) : '')
+          )
+      ) +
+      section('我的气泡颜色', card('<div class="ds-cell"><div class="ds-chips">' + chips + '</div></div>')) +
       '<div class="ds-muted">只改你发出的气泡，助手的不受影响。</div>' +
       '</div></div>'
     );
