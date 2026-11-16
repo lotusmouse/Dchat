@@ -172,6 +172,89 @@
     }
   }
 
+  /* ---------------- 聊天记录（IndexedDB）导入导出 ---------------- */
+
+  var IDB_NAME = 'chat-demo';
+  var IDB_STORES = ['sessions', 'sessionSummaries', 'sessionsStaging'];
+
+  function idbOpen() {
+    return new Promise(function (res, rej) {
+      var req = indexedDB.open(IDB_NAME);
+      req.onsuccess = function () {
+        res(req.result);
+      };
+      req.onerror = function () {
+        rej(req.error || new Error('打不开本地数据库'));
+      };
+    });
+  }
+
+  function idbGetAll(db, name) {
+    return new Promise(function (res, rej) {
+      var tx = db.transaction(name, 'readonly');
+      var req = tx.objectStore(name).getAll();
+      req.onsuccess = function () {
+        res(req.result || []);
+      };
+      req.onerror = function () {
+        rej(req.error);
+      };
+    });
+  }
+
+  async function exportChats() {
+    var db = await idbOpen();
+    var out = { app: 'dchat', kind: 'chats', version: 1, at: new Date().toISOString(), stores: {} };
+    for (var i = 0; i < IDB_STORES.length; i++) {
+      var n = IDB_STORES[i];
+      if (!db.objectStoreNames.contains(n)) continue;
+      out.stores[n] = await idbGetAll(db, n);
+    }
+    db.close();
+    return out;
+  }
+
+  async function importChats(obj) {
+    if (!obj || obj.kind !== 'chats' || !obj.stores) throw new Error('文件格式不对');
+    var db = await idbOpen();
+    for (var i = 0; i < IDB_STORES.length; i++) {
+      var n = IDB_STORES[i];
+      var rows = obj.stores[n];
+      if (!rows || !rows.length) continue;
+      if (!db.objectStoreNames.contains(n)) continue;
+      await new Promise(function (res, rej) {
+        var tx = db.transaction(n, 'readwrite');
+        var st = tx.objectStore(n);
+        for (var k = 0; k < rows.length; k++) {
+          try {
+            st.put(rows[k]);
+          } catch (e) {}
+        }
+        tx.oncomplete = res;
+        tx.onerror = function () {
+          rej(tx.error);
+        };
+      });
+    }
+    db.close();
+    return true;
+  }
+
+  function clearChats() {
+    return new Promise(function (res, rej) {
+      var req = indexedDB.deleteDatabase(IDB_NAME);
+      req.onsuccess = function () {
+        res(true);
+      };
+      req.onerror = function () {
+        rej(req.error);
+      };
+      req.onblocked = function () {
+        res(false);
+      };
+    });
+  }
+
   function normalizeItem(it) {
     if (!it || typeof it !== 'object') return null;
     var text = typeof it.text === 'string' ? it.text : '';
@@ -917,6 +1000,9 @@
     setCustomCss: setCustomCss,
     applyCustomCss: applyCustomCss,
     hookInstalled: function () { return proxyInstalled; },
+    exportChats: exportChats,
+    importChats: importChats,
+    clearChats: clearChats,
     getChatBg: getChatBg,
     setChatBg: setChatBg,
     getBubbleColor: getBubbleColor,
