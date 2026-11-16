@@ -10,7 +10,7 @@
   var X = window.__DSHXF;
   if (!X) return;
 
-  var VERSION = '2.8.1';
+  var VERSION = '2.9.0';
   var LS = {
     theme: 'chat-demo:theme-preference',
     locale: 'chat-demo:locale',
@@ -1563,6 +1563,12 @@
     close: closeOverlay,
     go: function (page) {
       if (!state.open) openOverlay('standalone', null);
+      state.stack = [page || 'root'];
+      render();
+    },
+    // 给官方 bundle 用的钩子：它原来调 t0(section) 打开自己的设置，现在直接开我们的
+    openAt: function (page) {
+      openOverlay('standalone', null);
       state.stack = [page || 'root'];
       render();
     },
