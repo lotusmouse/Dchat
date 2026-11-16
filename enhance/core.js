@@ -118,6 +118,39 @@
       root.style.removeProperty('--dshx-bubble');
       root.removeAttribute('data-dshx-bubble');
     }
+
+    try {
+      applyCustomCss();
+    } catch (e) {}
+  }
+
+  /* ---------------- 自定义 CSS ---------------- */
+
+  var CSS_KEY = 'dshx:custom-css';
+
+  function getCustomCss() {
+    return safeGet(CSS_KEY) || '';
+  }
+
+  function setCustomCss(v) {
+    if (v) safeSet(CSS_KEY, v);
+    else safeRemove(CSS_KEY);
+    applyCustomCss();
+  }
+
+  function applyCustomCss() {
+    var css = getCustomCss();
+    var el = document.getElementById('dshx-custom-css');
+    if (!css) {
+      if (el) el.remove();
+      return;
+    }
+    if (!el) {
+      el = document.createElement('style');
+      el.id = 'dshx-custom-css';
+      document.head.appendChild(el);
+    }
+    el.textContent = css;
   }
 
   function normalizeItem(it) {
@@ -857,6 +890,9 @@
     model: model,
     safety: safety,
     // 外观
+    getCustomCss: getCustomCss,
+    setCustomCss: setCustomCss,
+    applyCustomCss: applyCustomCss,
     getChatBg: getChatBg,
     setChatBg: setChatBg,
     getBubbleColor: getBubbleColor,
