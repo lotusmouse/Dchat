@@ -10,7 +10,7 @@
   var X = window.__DSHXF;
   if (!X) return;
 
-  var VERSION = '2.9.2';
+  var VERSION = '2.9.3';
   var LS = {
     theme: 'chat-demo:theme-preference',
     locale: 'chat-demo:locale',
@@ -790,22 +790,27 @@
     state.officialHidden = [];
   }
 
-  // 找到官方界面上那个「设置」入口元素（文字恰好是 设置 / Settings）
+  // 只返回真正带点击处理器的按钮，不能误点包含「设置」文字的外层容器。
   function findSettingsEntry() {
-    var all = document.querySelectorAll('body *');
+    var all = document.querySelectorAll('button, [role="button"]');
     var fallback = null;
     for (var i = 0; i < all.length; i++) {
       var el = all[i];
       if (el.closest && el.closest('#dshx-settings')) continue;
-      if (el.children.length > 3) continue;
       var t = (el.textContent || '').trim();
       if (t !== '设置' && t !== 'Settings') continue;
-      // 隐藏的不算（比如被我们藏起来的官方弹窗里也有「设置」两个字）
       if (!el.getClientRects().length) continue;
       if (el.closest && el.closest('[class*="sider"]')) return el;
       if (!fallback) fallback = el;
     }
     return fallback;
+  }
+
+  // 手机抽屉和收起的桌面边栏需要先展开，里面才有官方「设置」按钮。
+  function findSidebarToggle() {
+    return document.querySelector(
+      'button[aria-label="打开边栏"], button[aria-label="Open sidebar"]'
+    );
   }
 
   function tabTexts(dlg) {
@@ -983,24 +988,8 @@
     if (tab) tab.click();
   }
 
-  function waitForOfficialData(attempt) {
-    var dlg = findOfficial();
-    if (dlg) return prepareOfficialData(dlg);
-    if (attempt >= 40) {
-      state.mode = 'standalone';
-      state.hidden = false;
-      return showToast('官方数据管理打开失败，请重试', 'err');
-    }
-    setTimeout(function () {
-      waitForOfficialData(attempt + 1);
-    }, 50);
-  }
-
   function openOfficialData() {
     var dlg = findOfficial();
-    var entry = dlg ? null : findSettingsEntry();
-    if (!dlg && !entry) return showToast('找不到官方设置入口，请重试', 'err');
-
     var el = document.getElementById('dshx-settings');
     state.mode = 'official-data';
     state.open = false;
@@ -1011,11 +1000,40 @@
       el.classList.remove('ds-open');
       el.setAttribute('aria-hidden', 'true');
     }
-
     if (dlg) return prepareOfficialData(dlg);
-    state.allowOfficial = true;
-    entry.click();
-    waitForOfficialData(0);
+
+    var requested = false;
+    var attempts = 0;
+    function tryOpen() {
+      var current = findOfficial();
+      if (current) {
+        if (state.official !== current) prepareOfficialData(current);
+        return;
+      }
+      if (!requested) {
+        var entry = findSettingsEntry();
+        if (entry) {
+          requested = true;
+          state.allowOfficial = true;
+          entry.click();
+        } else if (attempts === 0) {
+          var toggle = findSidebarToggle();
+          if (toggle) toggle.click();
+        }
+      }
+      if (attempts++ >= 100) {
+        state.mode = 'standalone';
+        state.open = true;
+        state.hidden = false;
+        if (el) {
+          el.classList.add('ds-open');
+          el.setAttribute('aria-hidden', 'false');
+        }
+        return showToast('官方数据管理打开失败，请重试', 'err');
+      }
+      setTimeout(tryOpen, 50);
+    }
+    tryOpen();
   }
 
   function check() {
