@@ -10,7 +10,7 @@
   var X = window.__DSHXF;
   if (!X) return;
 
-  var VERSION = '2.9.1';
+  var VERSION = '2.9.2';
   var LS = {
     theme: 'chat-demo:theme-preference',
     locale: 'chat-demo:locale',
@@ -293,7 +293,7 @@
       section('数据',
         card(
           row({ icon: I.backup, label: '备份与恢复', act: 'nav', page: 'backup', value: '' }) +
-          row({ icon: I.data, label: '数据管理（导入 / 导出 / 清空）', act: 'nav', page: 'data', value: '' })
+          row({ icon: I.data, label: '数据管理（导入 / 导出 / 清空）', act: 'official-data', value: '' })
         )
       ) +
       section('关于',
@@ -513,18 +513,6 @@
     );
   };
 
-  pages.data = function () {
-    return (
-      '<div class="ds-page">' +
-      head('数据管理', { back: true }) +
-      '<div class="ds-scroll">' +
-      card(actionRow('导出全部对话', 'data-export') + actionRow('导入对话文件', 'data-import')) +
-      card(actionRow('清空全部对话', 'data-clear', { danger: true })) +
-      section('说明', card('<div class="ds-cell ds-note">对话存在本机 IndexedDB 里。导出的 JSON 含对话与摘要（不含图片附件）。清空不可恢复，建议先导出。</div>')) +
-      '</div></div>'
-    );
-  };
-
   pages.backup = function () {
     return (
       '<div class="ds-page">' +
@@ -705,97 +693,6 @@
     fileInput.addEventListener('change', onFilePicked);
     document.body.appendChild(fileInput);
     return fileInput;
-  }
-
-  function exportChatData() {
-    if (state.busy) return;
-    state.busy = true;
-    X.exportChats()
-      .then(function (data) {
-        var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-        var url = URL.createObjectURL(blob);
-        var a = document.createElement('a');
-        a.href = url;
-        a.download = 'dchat-chats-' + new Date().toISOString().replace(/[:.]/g, '-') + '.json';
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        setTimeout(function () { URL.revokeObjectURL(url); }, 5000);
-        showToast('已导出全部对话', 'ok');
-      })
-      .catch(function (e) {
-        showToast(e && e.message ? e.message : '导出失败', 'err');
-      })
-      .then(function () {
-        state.busy = false;
-      });
-  }
-
-  function clearChatData() {
-    if (state.busy) return;
-    var accepted = confirm('确定清空全部对话吗？此操作不可恢复，API Key 和增强设置会保留。');
-    if (!accepted) return;
-    state.busy = true;
-    X.clearChats()
-      .then(function () {
-        showToast('已清空全部对话，正在刷新', 'ok');
-        setTimeout(function () {
-          location.reload();
-        }, 700);
-      })
-      .catch(function (e) {
-        showToast(e && e.message ? e.message : '清空失败', 'err');
-      })
-      .then(function () {
-        state.busy = false;
-      });
-  }
-
-  var chatInput = null;
-
-  function pickChatFile() {
-    if (state.busy) return;
-    if (!chatInput) {
-      chatInput = document.createElement('input');
-      chatInput.type = 'file';
-      chatInput.accept = 'application/json,.json';
-      chatInput.style.display = 'none';
-      chatInput.addEventListener('change', function (ev) {
-        var f = ev.target.files && ev.target.files[0];
-        if (!f) return;
-        state.busy = true;
-        var rd = new FileReader();
-        rd.onload = function () {
-          try {
-            var obj = JSON.parse(String(rd.result));
-            X.importChats(obj)
-              .then(function () {
-                showToast('导入完成，正在刷新', 'ok');
-                setTimeout(function () {
-                  location.reload();
-                }, 700);
-              })
-              .catch(function (e) {
-                showToast(e && e.message ? e.message : '导入失败', 'err');
-              })
-              .then(function () {
-                state.busy = false;
-              });
-          } catch (e) {
-            state.busy = false;
-            showToast('不是合法的 JSON 文件', 'err');
-          }
-        };
-        rd.onerror = function () {
-          state.busy = false;
-          showToast('文件读取失败，请重试', 'err');
-        };
-        rd.readAsText(f);
-      });
-      document.body.appendChild(chatInput);
-    }
-    chatInput.value = '';
-    chatInput.click();
   }
 
   function pickBg() {
@@ -1075,8 +972,64 @@
     }, 140);
   }
 
+  // 聊天记录始终使用官方数据管理：ZIP 格式、附件处理、覆盖确认和清空逻辑都不在增强层重做。
+  function prepareOfficialData(dlg) {
+    state.official = dlg;
+    showOfficial();
+    try {
+      dlg.style.removeProperty('visibility');
+    } catch (e) {}
+    var tab = officialTab(dlg, 'data');
+    if (tab) tab.click();
+  }
+
+  function waitForOfficialData(attempt) {
+    var dlg = findOfficial();
+    if (dlg) return prepareOfficialData(dlg);
+    if (attempt >= 40) {
+      state.mode = 'standalone';
+      state.hidden = false;
+      return showToast('官方数据管理打开失败，请重试', 'err');
+    }
+    setTimeout(function () {
+      waitForOfficialData(attempt + 1);
+    }, 50);
+  }
+
+  function openOfficialData() {
+    var dlg = findOfficial();
+    var entry = dlg ? null : findSettingsEntry();
+    if (!dlg && !entry) return showToast('找不到官方设置入口，请重试', 'err');
+
+    var el = document.getElementById('dshx-settings');
+    state.mode = 'official-data';
+    state.open = false;
+    state.hidden = true;
+    state.official = dlg || null;
+    state.stack = ['root'];
+    if (el) {
+      el.classList.remove('ds-open');
+      el.setAttribute('aria-hidden', 'true');
+    }
+
+    if (dlg) return prepareOfficialData(dlg);
+    state.allowOfficial = true;
+    entry.click();
+    waitForOfficialData(0);
+  }
+
   function check() {
     var dlg = findOfficial();
+    if (state.mode === 'official-data') {
+      if (dlg) {
+        if (state.official !== dlg) prepareOfficialData(dlg);
+      } else if (state.official) {
+        state.official = null;
+        state.mode = 'standalone';
+        state.hidden = false;
+      }
+      return;
+    }
     if (dlg) {
       state.official = dlg;
       if (Date.now() < state.suppressUntil) {
@@ -1267,9 +1220,7 @@
     }
     if (act === 'backup-export') return exportSettings();
     if (act === 'backup-import') return importSettings();
-    if (act === 'data-export') return exportChatData();
-    if (act === 'data-import') return pickChatFile();
-    if (act === 'data-clear') return clearChatData();
+    if (act === 'official-data') return openOfficialData();
 
     if (act === 'nav-css') {
       state.stack.push('custom-css');

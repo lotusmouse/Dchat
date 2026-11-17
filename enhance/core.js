@@ -175,9 +175,7 @@
   /* ---------------- 聊天记录（IndexedDB）导入导出 ---------------- */
 
   var IDB_NAME = 'chat-demo';
-  var IDB_STORES = ['sessions', 'sessionSummaries', 'files', 'sessionsStaging', 'filesStaging'];
-  // JSON 备份只包含可序列化的会话数据；Blob 附件和导入暂存区不进入备份。
-  var CHAT_EXPORT_STORES = ['sessions', 'sessionSummaries'];
+  var IDB_STORES = ['sessions', 'sessionSummaries', 'sessionsStaging'];
 
   function idbOpen() {
     return new Promise(function (res, rej) {
@@ -206,63 +204,55 @@
 
   async function exportChats() {
     var db = await idbOpen();
-    try {
-      var out = { app: 'dchat', kind: 'chats', version: 1, at: new Date().toISOString(), stores: {} };
-      for (var i = 0; i < CHAT_EXPORT_STORES.length; i++) {
-        var n = CHAT_EXPORT_STORES[i];
-        if (!db.objectStoreNames.contains(n)) continue;
-        out.stores[n] = await idbGetAll(db, n);
-      }
-      return out;
-    } finally {
-      db.close();
+    var out = { app: 'dchat', kind: 'chats', version: 1, at: new Date().toISOString(), stores: {} };
+    for (var i = 0; i < IDB_STORES.length; i++) {
+      var n = IDB_STORES[i];
+      if (!db.objectStoreNames.contains(n)) continue;
+      out.stores[n] = await idbGetAll(db, n);
     }
+    db.close();
+    return out;
   }
 
   async function importChats(obj) {
     if (!obj || obj.kind !== 'chats' || !obj.stores) throw new Error('文件格式不对');
     var db = await idbOpen();
-    try {
-      for (var i = 0; i < CHAT_EXPORT_STORES.length; i++) {
-        var n = CHAT_EXPORT_STORES[i];
-        var rows = obj.stores[n];
-        if (!Array.isArray(rows) || !rows.length) continue;
-        if (!db.objectStoreNames.contains(n)) continue;
-        await new Promise(function (res, rej) {
-          var tx = db.transaction(n, 'readwrite');
-          var st = tx.objectStore(n);
-          for (var k = 0; k < rows.length; k++) st.put(rows[k]);
-          tx.oncomplete = res;
-          tx.onerror = tx.onabort = function () {
-            rej(tx.error || new Error('写入本地数据库失败'));
-          };
-        });
-      }
-      return true;
-    } finally {
-      db.close();
-    }
-  }
-
-  async function clearChats() {
-    var db = await idbOpen();
-    try {
-      var names = IDB_STORES.filter(function (name) {
-        return db.objectStoreNames.contains(name);
-      });
-      if (!names.length) return true;
+    for (var i = 0; i < IDB_STORES.length; i++) {
+      var n = IDB_STORES[i];
+      var rows = obj.stores[n];
+      if (!rows || !rows.length) continue;
+      if (!db.objectStoreNames.contains(n)) continue;
       await new Promise(function (res, rej) {
-        var tx = db.transaction(names, 'readwrite');
-        for (var i = 0; i < names.length; i++) tx.objectStore(names[i]).clear();
+        var tx = db.transaction(n, 'readwrite');
+        var st = tx.objectStore(n);
+        for (var k = 0; k < rows.length; k++) {
+          try {
+            st.put(rows[k]);
+          } catch (e) {}
+        }
         tx.oncomplete = res;
-        tx.onerror = tx.onabort = function () {
-          rej(tx.error || new Error('清空本地数据库失败'));
+        tx.onerror = function () {
+          rej(tx.error);
         };
       });
-      return true;
-    } finally {
-      db.close();
     }
+    db.close();
+    return true;
+  }
+
+  function clearChats() {
+    return new Promise(function (res, rej) {
+      var req = indexedDB.deleteDatabase(IDB_NAME);
+      req.onsuccess = function () {
+        res(true);
+      };
+      req.onerror = function () {
+        rej(req.error);
+      };
+      req.onblocked = function () {
+        res(false);
+      };
+    });
   }
 
   function normalizeItem(it) {
