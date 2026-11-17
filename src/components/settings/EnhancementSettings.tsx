@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { useEffect, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { enhancementCore, type EnhancementMemoryItem, type EnhancementSettings as Settings } from '../../services/enhancement.js'
 import { Button } from '../base/Button.js'
 import { Select } from '../base/Select.js'
@@ -8,6 +8,29 @@ import { closeSettings } from './settingsDialogState.js'
 import styles from './Settings.module.css'
 
 type Core = NonNullable<ReturnType<typeof enhancementCore>>
+type EnhancementPage = 'home' | 'account' | 'prompt' | 'memory' | 'context' | 'model' | 'voice' | 'appearance' | 'backup'
+
+const EnhancementPageContext = createContext<EnhancementPage>('home')
+const sectionPages: Record<string, EnhancementPage> = {
+  账户: 'account',
+  系统提示词: 'prompt',
+  长期记忆: 'memory',
+  上下文与用量: 'context',
+  模型与风控: 'model',
+  语音通话: 'voice',
+  外观增强: 'appearance',
+  增强设置备份: 'backup',
+}
+const entries: { page: Exclude<EnhancementPage, 'home'>; label: string; description: string }[] = [
+  { page: 'account', label: '账户', description: '余额查询与充值' },
+  { page: 'prompt', label: '系统提示词', description: '自定义助手提示词' },
+  { page: 'memory', label: '长期记忆', description: '自动记忆与手动管理' },
+  { page: 'context', label: '上下文与用量', description: '上下文压缩与本轮用量' },
+  { page: 'model', label: '模型与风控', description: '模型选择与内容风控' },
+  { page: 'voice', label: '语音通话', description: '免手持与通话设置' },
+  { page: 'appearance', label: '外观增强', description: '聊天背景、气泡与自定义 CSS' },
+  { page: 'backup', label: '增强设置备份', description: '导入或导出增强设置 JSON' },
+]
 
 const Row = ({ label, description, action }: { label: string; description?: string; action: ReactNode }) => (
   <div className={clsx(styles.cell, styles.row)}>
@@ -19,12 +42,15 @@ const Row = ({ label, description, action }: { label: string; description?: stri
   </div>
 )
 
-const Section = ({ title, children }: { title: string; children: ReactNode }) => (
-  <section className={styles.enhanceSection}>
-    <h3 className={styles.enhanceTitle}>{title}</h3>
-    {children}
-  </section>
-)
+const Section = ({ title, children }: { title: string; children: ReactNode }) => {
+  const page = useContext(EnhancementPageContext)
+  return (
+    <section className={styles.enhanceSection} hidden={page !== sectionPages[title]}>
+      <h3 className={styles.enhanceTitle}>{title}</h3>
+      {children}
+    </section>
+  )
+}
 
 const Toggle = ({ label, checked, onChange }: { label: string; checked: boolean; onChange: () => void }) => (
   <input
@@ -55,6 +81,8 @@ export const EnhancementSettings = () => {
 }
 
 const EnhancementContent = ({ core }: { core: Core }) => {
+  const [page, setPage] = useState<EnhancementPage>('home')
+  const contentRef = useRef<HTMLDivElement>(null)
   const [settings, setSettings] = useState<Settings>(() => core.getSettings())
   const [prompt, setPrompt] = useState(settings.system)
   const [model, setModel] = useState(settings.model)
@@ -67,6 +95,10 @@ const EnhancementContent = ({ core }: { core: Core }) => {
   const [customCssAi, setCustomCssAi] = useState(core.getCustomCssAi())
   const [usage, setUsage] = useState(core.lastUsage)
   const [balance, setBalance] = useState(core.lastBalance)
+
+  useEffect(() => {
+    contentRef.current?.parentElement?.scrollTo({ top: 0 })
+  }, [page])
 
   useEffect(() => {
     const onUsage = () => setUsage(core.lastUsage)
@@ -179,8 +211,32 @@ const EnhancementContent = ({ core }: { core: Core }) => {
   }
 
   return (
-    <div className={styles.enhanceContent}>
-      <Section title="账户">
+    <EnhancementPageContext.Provider value={page}>
+      <div ref={contentRef} className={styles.enhanceContent}>
+        {page === 'home' ? (
+          <div className={styles.enhanceEntryList}>
+            {entries.map((entry) => (
+              <button
+                key={entry.page}
+                type="button"
+                className={styles.enhanceEntry}
+                aria-label={entry.label}
+                onClick={() => setPage(entry.page)}
+              >
+                <span className={styles.enhanceEntryText}>
+                  <span className={styles.enhanceEntryLabel}>{entry.label}</span>
+                  <span className={styles.enhanceEntryDescription}>{entry.description}</span>
+                </span>
+                <span className={styles.enhanceChevron} aria-hidden="true">›</span>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <button type="button" className={styles.enhanceBack} aria-label="返回增强设置" onClick={() => setPage('home')}>
+            <span aria-hidden="true">‹</span> 增强设置
+          </button>
+        )}
+        <Section title="账户">
         <Row
           label="账户余额"
           description={balance ? `${core.fmtMoney(balance.total, balance.currency)}${balance.available ? '' : '（余额不足）'}` : '使用当前 API Key 查询'}
@@ -281,7 +337,8 @@ const EnhancementContent = ({ core }: { core: Core }) => {
           <Button variant="outlined" size="m" onClick={() => downloadJson(core.getSettings(), 'deepseek-enhance-settings.json')}>导出增强设置</Button>
           <Button variant="outlined" size="m" onClick={importSettings}>导入增强设置</Button>
         </div>
-      </Section>
-    </div>
+        </Section>
+      </div>
+    </EnhancementPageContext.Provider>
   )
 }
