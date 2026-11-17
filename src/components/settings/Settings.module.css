@@ -288,6 +288,149 @@
   }
 }
 
+.enhanceContent {
+  padding-top: 4px;
+  padding-bottom: 16px;
+}
+
+.enhanceSection {
+  padding: 10px 0 16px;
+}
+
+.enhanceSection + .enhanceSection {
+  box-shadow: inset 0 1px 0 0 var(--dsw-alias-border-l2-darkmode-thin);
+}
+
+.enhanceTitle {
+  margin: 0 0 4px;
+  font-size: 14px;
+  line-height: 22px;
+  font-weight: 600;
+}
+
+.enhanceContent .row {
+  flex-wrap: wrap;
+}
+
+.enhanceContent .text {
+  flex: 1 1 220px;
+}
+
+.enhanceToggle {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin: 0 8px;
+  accent-color: var(--dsw-alias-brand-primary);
+  cursor: pointer;
+}
+
+.enhanceActions,
+.enhanceMemoryAdd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.enhanceInput,
+.enhanceNumber,
+.enhanceTextarea {
+  box-sizing: border-box;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 10px;
+  outline: none;
+  background: transparent;
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  font-size: 14px;
+  line-height: 22px;
+  transition: border-color var(--ds-transition-duration) var(--ds-ease-in-out);
+}
+
+.enhanceInput:focus,
+.enhanceNumber:focus,
+.enhanceTextarea:focus {
+  border-color: var(--dsw-alias-brand-primary);
+}
+
+.enhanceInput {
+  flex: 1 1 200px;
+  min-width: 0;
+  min-height: var(--ds-control-height-m);
+  padding: 6px 10px;
+}
+
+.enhanceNumber {
+  width: 120px;
+  min-height: var(--ds-control-height-m);
+  padding: 6px 10px;
+}
+
+.enhanceTextarea {
+  display: block;
+  width: 100%;
+  margin: 8px 0;
+  padding: 8px 10px;
+  resize: vertical;
+}
+
+.enhanceMemoryList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.enhanceMemoryItem {
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.enhanceMemoryMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.enhanceMemoryMeta input {
+  accent-color: var(--dsw-alias-brand-primary);
+}
+
+.enhanceMemoryMeta button {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--dsw-alias-state-error-primary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.enhanceCssLabel {
+  display: block;
+  margin-top: 12px;
+  font-size: 14px;
+  line-height: 22px;
+}
+
+@media not all and (min-width: 768px) {
+  .enhanceActions > button,
+  .enhanceMemoryAdd > button {
+    min-height: 44px;
+  }
+
+  .enhanceInput,
+  .enhanceNumber,
+  .enhanceTextarea {
+    font-size: 16px;
+  }
+}
+
 @media not all and (min-width: 768px) {
   .dialog {
     align-self: flex-end;

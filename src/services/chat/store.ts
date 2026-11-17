@@ -5,6 +5,12 @@ import type { ChatModel, CreateMessageRequest } from '../api/types.js'
 import { extractFileIds, getFileErrorCode, isRetryableApiError } from '../api/errors.js'
 import { cancelUpload, describeUploadError, uploadAttachment, useUploads } from '../attachments.js'
 import { useSettings } from '../settings.js'
+import {
+  enhancementMessages,
+  enhancementModel,
+  enhancementSafety,
+  enhancementSystem,
+} from '../enhancement.js'
 import { appendBranch, getVisibleMessages, normalizeSession, selectVersion } from './branches.js'
 import * as db from './db.js'
 import {
@@ -999,11 +1005,11 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
         const events = streamMessage(
           useSettings.getState().apiKey ?? '',
           {
-            model: initial.model ?? MODEL,
-            system: SYSTEM_PROMPT,
-            messages,
+            model: enhancementModel(initial.model ?? MODEL),
+            system: enhancementSystem(SYSTEM_PROMPT),
+            messages: enhancementMessages(messages),
             thinking: { type: initial.thinking ? 'enabled' : 'disabled' },
-            safety_check: SAFETY_CHECK,
+            safety_check: enhancementSafety(SAFETY_CHECK),
             tools: serverTools(initial.search ?? false),
             ...(titleRequests.has(controller) ? { title: { enabled: true } } : {}),
           },

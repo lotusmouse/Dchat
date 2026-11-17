@@ -94,6 +94,7 @@ export const zh = {
   settingsLocationRegion: '请选择国家或地区',
   settingDialogAsideGeneralOptionLabel: '通用设置',
   settingDialogAsideDataOptionLabel: '数据管理',
+  settingDialogAsideEnhancementOptionLabel: '增强设置',
   avatarMenuSettingsDialogThemeItemLabel: '主题',
   avatarMenuSettingsDialogThemeSelectLightOption: '浅色',
   avatarMenuSettingsDialogThemeSelectDarkOption: '深色',

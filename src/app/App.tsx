@@ -58,6 +58,17 @@ export const App = () => {
 
   // 文件数、存储空间达到上限时，附件上只显示「上传失败」，原因用 toast 说明
   useEffect(() => onUploadNotice(showToast), [])
+  // 语音等静态增强模块统一复用官方轻提示，不再依赖独立设置页转发。
+  useEffect(() => {
+    const onEnhancementToast = (event: Event) => {
+      const text = (event as CustomEvent<{ text?: unknown }>).detail?.text
+      if (typeof text === 'string' && text) {
+        showToast(text)
+      }
+    }
+    window.addEventListener('dshx:toast', onEnhancementToast)
+    return () => window.removeEventListener('dshx:toast', onEnhancementToast)
+  }, [])
   useEffect(bindChatPersistence, [])
 
   // 搜索结果面板只属于当前会话
