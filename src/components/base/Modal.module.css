@@ -1,5 +1,5 @@
 .overlay {
-  --overlay-opacity: 0.36;
+  --overlay-opacity: 0.24;
   position: fixed;
   inset: 0;
   z-index: 1000;
@@ -7,30 +7,57 @@
   align-items: center;
   justify-content: center;
   background-color: rgba(0, 0, 0, var(--overlay-opacity));
-  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
 
   [data-ds-dark-theme] & {
-    --overlay-opacity: 0.6;
+    --overlay-opacity: 0.52;
   }
 }
 
 .content {
+  --dsw-alias-brand-primary: #181818;
+  --dsw-alias-brand-text: #181818;
+  --dsw-alias-button-primary-fill: #181818;
+  --dsw-alias-button-primary-hover: #000;
+  --dsw-alias-label-primary-foreground: #fff;
+  --dsw-alias-button-ghost-active-fill: rgba(0, 0, 0, 0.07);
+  --dsw-alias-button-ghost-active-border: rgba(0, 0, 0, 0.1);
+  --dsw-alias-button-ghost-active-hover: rgba(0, 0, 0, 0.1);
+  --dsw-alias-bg-layer-2: rgba(250, 250, 250, 0.8);
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
   width: 380px;
   max-width: calc(100vw - 32px);
   padding: 22px 24px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
   border-radius: 24px;
   font-size: 14px;
   line-height: 22px;
   color: var(--dsw-alias-label-primary);
   background-color: var(--dsw-alias-bg-layer-2);
+  -webkit-backdrop-filter: blur(28px) saturate(0.75);
+  backdrop-filter: blur(28px) saturate(0.75);
   box-shadow:
-    inset 0 0 0 1px var(--dsw-alias-border-inverted),
-    0 0 1px 0 rgba(0, 0, 0, 0.2),
-    0 0 4px 0 rgba(0, 0, 0, 0.02),
-    0 12px 32px 0 rgba(0, 0, 0, 0.08);
+    inset 0 1px 0 rgba(255, 255, 255, 0.68),
+    0 20px 60px rgba(0, 0, 0, 0.16);
+
+  [data-ds-dark-theme] & {
+    --dsw-alias-brand-primary: #f2f2f2;
+    --dsw-alias-brand-text: #f2f2f2;
+    --dsw-alias-button-primary-fill: rgba(255, 255, 255, 0.88);
+    --dsw-alias-button-primary-hover: #fff;
+    --dsw-alias-label-primary-foreground: #111;
+    --dsw-alias-button-ghost-active-fill: rgba(255, 255, 255, 0.1);
+    --dsw-alias-button-ghost-active-border: rgba(255, 255, 255, 0.14);
+    --dsw-alias-button-ghost-active-hover: rgba(255, 255, 255, 0.14);
+    --dsw-alias-bg-layer-2: rgba(24, 24, 24, 0.82);
+    border-color: rgba(255, 255, 255, 0.12);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      0 20px 60px rgba(0, 0, 0, 0.46);
+  }
 }
 
 .header {

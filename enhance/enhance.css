@@ -684,7 +684,8 @@ html[data-ds-theme="dark"] #dshx-settings .ds-chev {
 /* 聊天页头部的通话按钮（位置跟随官方的「新对话」按钮计算） */
 #dshx-call-fab {
   position: fixed;
-  z-index: 2147483100;
+  /* 官方设置遮罩为 1000；通话入口必须低于遮罩，避免穿透点击。 */
+  z-index: 100;
   display: none;
   align-items: center;
   justify-content: center;

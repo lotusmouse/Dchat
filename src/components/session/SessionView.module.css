@@ -40,13 +40,8 @@
   width: calc(var(--message-list-max-width) - 64px);
   max-width: calc(100% - 32px);
   margin: auto auto 0;
-  background: linear-gradient(
-    to bottom,
-    transparent 0%,
-    transparent 30%,
-    var(--dsw-alias-bg-base) 30%,
-    var(--dsw-alias-bg-base) 100%
-  );
+  padding-top: 10px;
+  background: transparent;
 }
 
 .caveat {

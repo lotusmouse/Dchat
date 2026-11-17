@@ -1,6 +1,13 @@
 .wrapper {
   --line-height: 24px;
   --input-padding-top: 12px;
+  --dsw-alias-brand-text: #181818;
+  --dsw-alias-button-primary-fill: #181818;
+  --dsw-alias-button-primary-hover: #000;
+  --dsw-alias-label-primary-foreground: #fff;
+  --dsw-alias-button-ghost-active-fill: rgba(0, 0, 0, 0.07);
+  --dsw-alias-button-ghost-active-border: rgba(0, 0, 0, 0.1);
+  --dsw-alias-button-ghost-active-hover: rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -8,26 +15,36 @@
   cursor: text;
   font-size: 16px;
   line-height: var(--line-height);
+  border: 1px solid rgba(255, 255, 255, 0.74);
   border-radius: 24px;
-  border: 1px solid var(--dsw-alias-border-l2-darkmode-thin);
-  background: var(--dsw-specific-input-major);
+  background: rgba(255, 255, 255, 0.68);
+  -webkit-backdrop-filter: blur(24px) saturate(0.75);
+  backdrop-filter: blur(24px) saturate(0.75);
   overflow: hidden;
-}
-
-.session {
-  box-shadow:
-    0 4px 10px rgba(0, 0, 0, 0.02),
-    0 2px 4px rgba(0, 0, 0, 0.04);
-}
-
-.home {
-  box-shadow:
-    0 4px 12px 0 rgba(0, 0, 0, 0.02),
-    0 2px 2px 0 rgba(72, 104, 178, 0.01),
-    0 30px 60px 0 rgba(72, 104, 178, 0.03);
 
   [data-ds-dark-theme] & {
-    box-shadow: none;
+    --dsw-alias-brand-text: #f2f2f2;
+    --dsw-alias-button-primary-fill: rgba(255, 255, 255, 0.88);
+    --dsw-alias-button-primary-hover: #fff;
+    --dsw-alias-label-primary-foreground: #111;
+    --dsw-alias-button-ghost-active-fill: rgba(255, 255, 255, 0.1);
+    --dsw-alias-button-ghost-active-border: rgba(255, 255, 255, 0.14);
+    --dsw-alias-button-ghost-active-hover: rgba(255, 255, 255, 0.14);
+    border-color: rgba(255, 255, 255, 0.12);
+    background: rgba(24, 24, 24, 0.72);
+  }
+}
+
+.session,
+.home {
+  box-shadow:
+    0 12px 36px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.58);
+
+  [data-ds-dark-theme] & {
+    box-shadow:
+      0 14px 40px rgba(0, 0, 0, 0.42),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06);
   }
 }
 
@@ -317,7 +334,7 @@
   border: none;
   border-radius: 50%;
   background: var(--dsw-alias-button-primary-fill);
-  color: var(--dsw-static-neutral-bluish-00);
+  color: var(--dsw-alias-label-primary-foreground);
   cursor: pointer;
   transition: background 0.2s ease;
 
