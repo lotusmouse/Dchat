@@ -10,7 +10,7 @@
   var X = window.__DSHXF;
   if (!X) return;
 
-  var VERSION = '2.9.0';
+  var VERSION = '2.9.1';
   var LS = {
     theme: 'chat-demo:theme-preference',
     locale: 'chat-demo:locale',
@@ -707,9 +707,54 @@
     return fileInput;
   }
 
+  function exportChatData() {
+    if (state.busy) return;
+    state.busy = true;
+    X.exportChats()
+      .then(function (data) {
+        var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'dchat-chats-' + new Date().toISOString().replace(/[:.]/g, '-') + '.json';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 5000);
+        showToast('已导出全部对话', 'ok');
+      })
+      .catch(function (e) {
+        showToast(e && e.message ? e.message : '导出失败', 'err');
+      })
+      .then(function () {
+        state.busy = false;
+      });
+  }
+
+  function clearChatData() {
+    if (state.busy) return;
+    var accepted = confirm('确定清空全部对话吗？此操作不可恢复，API Key 和增强设置会保留。');
+    if (!accepted) return;
+    state.busy = true;
+    X.clearChats()
+      .then(function () {
+        showToast('已清空全部对话，正在刷新', 'ok');
+        setTimeout(function () {
+          location.reload();
+        }, 700);
+      })
+      .catch(function (e) {
+        showToast(e && e.message ? e.message : '清空失败', 'err');
+      })
+      .then(function () {
+        state.busy = false;
+      });
+  }
+
   var chatInput = null;
 
   function pickChatFile() {
+    if (state.busy) return;
     if (!chatInput) {
       chatInput = document.createElement('input');
       chatInput.type = 'file';
@@ -718,6 +763,7 @@
       chatInput.addEventListener('change', function (ev) {
         var f = ev.target.files && ev.target.files[0];
         if (!f) return;
+        state.busy = true;
         var rd = new FileReader();
         rd.onload = function () {
           try {
@@ -731,10 +777,18 @@
               })
               .catch(function (e) {
                 showToast(e && e.message ? e.message : '导入失败', 'err');
+              })
+              .then(function () {
+                state.busy = false;
               });
           } catch (e) {
+            state.busy = false;
             showToast('不是合法的 JSON 文件', 'err');
           }
+        };
+        rd.onerror = function () {
+          state.busy = false;
+          showToast('文件读取失败，请重试', 'err');
         };
         rd.readAsText(f);
       });
@@ -1213,6 +1267,9 @@
     }
     if (act === 'backup-export') return exportSettings();
     if (act === 'backup-import') return importSettings();
+    if (act === 'data-export') return exportChatData();
+    if (act === 'data-import') return pickChatFile();
+    if (act === 'data-clear') return clearChatData();
 
     if (act === 'nav-css') {
       state.stack.push('custom-css');
