@@ -1016,7 +1016,7 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
           const events = streamMessage(
             useSettings.getState().apiKey ?? '',
             {
-              model: enhancementModel(initial.model ?? MODEL),
+              model: enhancementModel(initial.model ?? MODEL, initial.thinking ?? false),
               system: enhancementSystem(SYSTEM_PROMPT),
               messages: requestMessages,
               thinking: initial.thinking ? { type: 'enabled' as const } : omitThinking ? undefined : { type: 'disabled' as const },

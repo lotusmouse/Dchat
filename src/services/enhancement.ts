@@ -23,6 +23,8 @@ export type EnhancementSettings = {
   compressedHashes: string[]
   compressAt: number
   model: string
+  /** 关闭深度思考时使用的模型 */
+  modelOff: string
   safety: 'standard' | 'high'
   showUsage: boolean
 }
@@ -34,7 +36,7 @@ export type EnhancementBalance = {
 }
 
 type EnhancementCore = {
-  model(): string
+  model(thinkingOn?: boolean): string
   sys(): string
   ctx(messages: MessageParam[]): MessageParam[]
   safety(): { level: 'high' } | undefined
@@ -78,8 +80,8 @@ declare global {
 export const enhancementCore = () => window.__DSHXF
 
 // 官方源码直接调用增强钩子；独立运行未加载增强核心时回退到官方默认值。
-export const enhancementModel = (fallback: ChatModel): ChatModel =>
-  (enhancementCore()?.model() || fallback) as ChatModel
+export const enhancementModel = (fallback: ChatModel, thinkingOn?: boolean): ChatModel =>
+  (enhancementCore()?.model(thinkingOn) || fallback) as ChatModel
 
 export const enhancementSystem = (fallback: string): string =>
   enhancementCore()?.sys() ?? fallback

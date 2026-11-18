@@ -14,6 +14,7 @@
   var API_KEY_STORE = 'chat-demo:api-key';
   var DEFAULT_SYSTEM = '该助手为DeepSeek，由深度求索公司创造。';
   var DEFAULT_MODEL = 'deepseek-flash';
+  var MODEL_OFF = 'deepseek-flash';
   var MAX_ITEMS = 60;
 
   var origFetch = typeof window !== 'undefined' && window.fetch ? window.fetch.bind(window) : null;
@@ -28,7 +29,8 @@
     autoCompress: true,
     compressedHashes: [],
     compressAt: 100000,
-    model: DEFAULT_MODEL,
+    model: 'deepseek-v4-pro',
+    modelOff: 'deepseek-flash',
     safety: 'standard',
     showUsage: true
   };
@@ -298,6 +300,7 @@
     }
     if (typeof s.system !== 'string') s.system = DEFAULT_SYSTEM;
     if (typeof s.model !== 'string' || !s.model.trim()) s.model = DEFAULT_MODEL;
+    if (typeof s.modelOff !== 'string' || !s.modelOff.trim()) s.modelOff = MODEL_OFF;
     if (s.safety !== 'standard' && s.safety !== 'high') s.safety = 'standard';
     s.systemEnabled = s.systemEnabled !== false;
     s.memoryEnabled = s.memoryEnabled !== false;
@@ -401,9 +404,13 @@
     }
   }
 
-  function model() {
+  function model(thinkingOn) {
     try {
-      var m = getSettings().model;
+      var s = getSettings();
+      // 官方 demo 固定用 deepseek-flash；深度思考关闭时如果用推理模型，服务端会无视 disabled 继续思考，
+      // 所以关闭时统一走非思考模型。
+      if (thinkingOn === false) return s.modelOff || MODEL_OFF;
+      var m = s.model;
       return m && m.trim() ? m.trim() : DEFAULT_MODEL;
     } catch (e) {
       return DEFAULT_MODEL;
