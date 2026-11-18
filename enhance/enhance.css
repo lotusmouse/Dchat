@@ -689,14 +689,14 @@ html[data-ds-theme="dark"] #dshx-settings .ds-chev {
   display: none;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
+  width: 44px;
+  height: 44px;
   padding: 0;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: none;
   border-radius: 50%;
-  background: #fff;
+  background: transparent;
   color: #1c1c1e;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: none;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
@@ -707,15 +707,14 @@ body.dchat-mobile-drawer-open #dshx-call-fab {
 }
 
 html[data-ds-theme="dark"] #dshx-call-fab {
-  background: #1c1c1e;
+  background: transparent;
   color: #f2f2f7;
-  border-color: rgba(255, 255, 255, 0.12);
 }
 
 #dshx-call-fab svg {
-  width: 18px;
-  height: 18px;
-  transform: rotate(135deg);
+  width: 20px;
+  height: 20px;
+  transform: none;
 }
 
 #dshx-call {
