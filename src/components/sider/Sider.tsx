@@ -1,7 +1,7 @@
 import clsx from 'clsx'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslate } from '../../i18n/index.js'
-import { IconPanelLeftOutline16, IconSettingsOutline16, NewChatIcon } from '../base/icons.js'
+import { IconPanelLeftOutline16, IconSearchOutline16, IconSettingsOutline16, NewChatIcon } from '../base/icons.js'
 import { setSiderCollapsed } from '../../services/settings.js'
 import { groupSessions } from '../../services/chat/sessionGroups.js'
 import { newChat, removeSession, useChatStore } from '../../services/chat/store.js'
@@ -21,7 +21,14 @@ export const Sider = ({ mobile = false }: { mobile?: boolean }) => {
   const sessions = useChatStore((state) => state.sessions)
   const activeId = useChatStore((state) => state.activeId)
   const [now, setNow] = useState(Date.now)
-  const groups = useMemo(() => groupSessions(sessions, now, t), [sessions, now, t])
+  const [query, setQuery] = useState('')
+  const groups = useMemo(() => {
+    const keyword = query.trim().toLocaleLowerCase()
+    const visible = keyword
+      ? sessions.filter((session) => session.title.toLocaleLowerCase().includes(keyword))
+      : sessions
+    return groupSessions(visible, now, t)
+  }, [sessions, query, now, t])
   const [deleting, setDeleting] = useState<SessionSummary | null>(null)
   const [deletePending, setDeletePending] = useState(false)
 
@@ -61,6 +68,17 @@ export const Sider = ({ mobile = false }: { mobile?: boolean }) => {
           onClick={() => (mobile ? closeMobileSider() : setSiderCollapsed(true))}
         />
       </div>
+      {mobile ? (
+        <label className={styles.mobileSearch}>
+          <IconSearchOutline16 />
+          <input
+            value={query}
+            aria-label={t('searchConversations')}
+            placeholder={t('searchConversations')}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </label>
+      ) : null}
       <button
         type="button"
         className={styles.newChat}
@@ -92,7 +110,14 @@ export const Sider = ({ mobile = false }: { mobile?: boolean }) => {
         </div>
       </div>
       <div className={styles.bottom}>
-        <button type="button" className={styles.settings} onClick={() => openSettings('general')}>
+        <button
+          type="button"
+          className={styles.settings}
+          onClick={() => {
+            closeMobileSider()
+            openSettings('general')
+          }}
+        >
           <span className={styles.settingsIcon}>
             <IconSettingsOutline16 />
           </span>
@@ -143,6 +168,13 @@ export const Sider = ({ mobile = false }: { mobile?: boolean }) => {
 /** 移动端抽屉：浮在页面上方，点空白区域关闭。 */
 export const MobileSider = () => {
   const open = useMobileSider((state) => state.open)
+  useEffect(() => {
+    if (!open) {
+      return
+    }
+    document.body.classList.add('dchat-mobile-drawer-open')
+    return () => document.body.classList.remove('dchat-mobile-drawer-open')
+  }, [open])
   if (!open) {
     return null
   }

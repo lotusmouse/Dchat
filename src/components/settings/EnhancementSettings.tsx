@@ -1,6 +1,7 @@
 import clsx from 'clsx'
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { enhancementCore, type EnhancementMemoryItem, type EnhancementSettings as Settings } from '../../services/enhancement.js'
+import { setAppIcon, useAppIcon } from '../../services/appIcon.js'
 import { Button } from '../base/Button.js'
 import { Select } from '../base/Select.js'
 import { showToast } from '../base/toastState.js'
@@ -95,6 +96,7 @@ const EnhancementContent = ({ core }: { core: Core }) => {
   const [customCssAi, setCustomCssAi] = useState(core.getCustomCssAi())
   const [usage, setUsage] = useState(core.lastUsage)
   const [balance, setBalance] = useState(core.lastBalance)
+  const appIcon = useAppIcon()
 
   useEffect(() => {
     contentRef.current?.parentElement?.scrollTo({ top: 0 })
@@ -201,6 +203,43 @@ const EnhancementContent = ({ core }: { core: Core }) => {
           core.setChatBg(data)
           setBackground(data)
           showToast('聊天背景已更新')
+        }
+        image.onerror = () => showToast('图片读取失败，请换一张试试')
+        image.src = String(reader.result)
+      }
+      reader.readAsDataURL(file)
+    }
+    input.click()
+  }
+
+  const pickAppIcon = () => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = 'image/*'
+    input.onchange = () => {
+      const file = input.files?.[0]
+      if (!file) {
+        return
+      }
+      const reader = new FileReader()
+      reader.onload = () => {
+        const image = new Image()
+        image.onload = () => {
+          const scale = Math.min(1, 256 / Math.max(image.width, image.height))
+          const canvas = document.createElement('canvas')
+          canvas.width = Math.max(1, Math.round(image.width * scale))
+          canvas.height = Math.max(1, Math.round(image.height * scale))
+          const context = canvas.getContext('2d')
+          if (!context) {
+            showToast('图标处理失败，请换一张图片')
+            return
+          }
+          context.drawImage(image, 0, 0, canvas.width, canvas.height)
+          if (setAppIcon(canvas.toDataURL('image/png'))) {
+            showToast('欢迎页图标已更新')
+          } else {
+            showToast('图标保存失败，请换一张更小的图片')
+          }
         }
         image.onerror = () => showToast('图片读取失败，请换一张试试')
         image.src = String(reader.result)
@@ -320,6 +359,33 @@ const EnhancementContent = ({ core }: { core: Core }) => {
       </Section>
 
       <Section title="外观增强">
+        <div className={styles.enhanceAppIconPreview}>
+          {appIcon ? <img src={appIcon} alt="当前欢迎页图标" /> : <span>D</span>}
+        </div>
+        <Row
+          label="欢迎页图标"
+          description={appIcon ? '已使用自定义图片，保存在本机' : '默认显示 DChat 字母图标，可上传自己的图片'}
+          action={
+            <div className={styles.enhanceActions}>
+              <Button variant="outlined" size="m" onClick={pickAppIcon}>{appIcon ? '更换' : '上传图标'}</Button>
+              {appIcon ? (
+                <Button
+                  variant="outlined"
+                  size="m"
+                  onClick={() => {
+                    if (setAppIcon('')) {
+                      showToast('已恢复默认图标')
+                    } else {
+                      showToast('图标移除失败，请重试')
+                    }
+                  }}
+                >
+                  移除
+                </Button>
+              ) : null}
+            </div>
+          }
+        />
         <Row label="聊天背景" description={background ? '已设置自定义背景图' : '使用默认背景'} action={<div className={styles.enhanceActions}><Button variant="outlined" size="m" onClick={pickBackground}>{background ? '更换' : '上传'}</Button>{background ? <Button variant="outlined" size="m" onClick={() => { core.setChatBg(''); setBackground('') }}>移除</Button> : null}</div>} />
         <Row label="我的气泡颜色" action={<Select ariaLabel="我的气泡颜色" value={bubble} options={[{ value: '', label: '默认' }, { value: '#dbeafe', label: '雾蓝' }, { value: '#d9f2ff', label: '天蓝' }, { value: '#dcfce7', label: '薄荷' }, { value: '#fde2e4', label: '樱粉' }, { value: '#fef3c7', label: '奶黄' }, { value: '#ede9fe', label: '香芋' }, { value: '#e5e7eb', label: '浅灰' }, { value: '#111827', label: '墨黑' }]} onChange={(value) => { core.setBubbleColor(value); setBubble(value) }} />} />
         <label className={styles.enhanceCssLabel}>我的气泡 CSS<textarea className={styles.enhanceTextarea} rows={3} value={customCss} onChange={(event) => setCustomCss(event.target.value)} spellCheck={false} /></label>

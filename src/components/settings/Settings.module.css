@@ -288,6 +288,29 @@
   }
 }
 
+.enhanceAppIconPreview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  margin: 8px 0 4px;
+  overflow: hidden;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 18px;
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+  font-size: 28px;
+  font-weight: 600;
+
+  img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
 .enhanceContent {
   padding-top: 4px;
   padding-bottom: 16px;

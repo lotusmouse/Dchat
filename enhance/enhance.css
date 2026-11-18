@@ -701,6 +701,11 @@ html[data-ds-theme="dark"] #dshx-settings .ds-chev {
   -webkit-tap-highlight-color: transparent;
 }
 
+body.dchat-mobile-drawer-open #dshx-call-fab {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 html[data-ds-theme="dark"] #dshx-call-fab {
   background: #1c1c1e;
   color: #f2f2f7;

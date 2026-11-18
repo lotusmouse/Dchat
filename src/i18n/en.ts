@@ -1,11 +1,13 @@
 import type { zh } from './zh.js'
 
 export const en = {
-  welcomeMessageChat250808: 'How can I help you?',
+  welcomeMessageChat250808: 'Welcome back. Start whenever you’re ready.',
   contentCaveat: 'AI-generated, for reference only',
   expandSiderbarButton: 'Open sidebar',
   collapseSiderbarButton: 'Close sidebar',
   newChat: 'New chat',
+  chatInputPlaceholderMobile: 'Message or hold to talk',
+  searchConversations: 'Search chats…',
   untitledChat: 'New chat',
   sessionLoading: 'Loading chats...',
   sessionListLoadFailed: 'Unable to load the chat list. Please try again.',

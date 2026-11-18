@@ -1,9 +1,11 @@
 export const zh = {
-  welcomeMessageChat250808: '今天有什么可以帮到你？',
+  welcomeMessageChat250808: '欢迎回来，随时开始吧',
   contentCaveat: '内容由 AI 生成，请仔细甄别',
   expandSiderbarButton: '打开边栏',
   collapseSiderbarButton: '收起边栏',
   newChat: '开启新对话',
+  chatInputPlaceholderMobile: '发消息或按住说话',
+  searchConversations: '搜索对话…',
   untitledChat: '新对话',
   sessionLoading: '正在加载对话...',
   sessionListLoadFailed: '对话列表加载失败，请重试',

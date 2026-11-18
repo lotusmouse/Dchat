@@ -577,7 +577,7 @@
     }
 
     var top = Math.round(r.top + r.height / 2 - 17);
-    var left = Math.round(r.left - 46);
+    var left = Math.round(r.left - 44);
     if (top !== fabPos.top || left !== fabPos.left) {
       fab.style.right = 'auto';
       fab.style.top = top + 'px';

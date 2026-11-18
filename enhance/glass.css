@@ -3,58 +3,7 @@
    不改：聊天主界面的消息区、输入框（保持官方原样）、页面背景（纯白）。
    配色只允许 白 / 灰 / 黑。 */
 
-/* ---- 1. 官方侧边栏：悬浮圆角玻璃卡 ---- */
-body .sider-ac14ac {
-  --dsw-specific-sidebar-fill: transparent;
-  --dsw-specific-sidebar-nav-item-active-accent: rgba(17, 17, 20, 0.07);
-  --dsw-specific-sidebar-nav-item-hover: rgba(17, 17, 20, 0.045);
-  --dsw-alias-brand-primary: #111114;
-  --dsw-alias-brand-primary-invert: #111114;
-
-  box-sizing: border-box;
-  width: 248px;
-  height: calc(100% - 16px);
-  margin: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  border-radius: 22px;
-  background-clip: padding-box;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.82) 0%, rgba(246, 246, 248, 0.7) 100%);
-  -webkit-backdrop-filter: blur(26px) saturate(1.15);
-  backdrop-filter: blur(26px) saturate(1.15);
-  box-shadow: 0 16px 40px rgba(17, 17, 20, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.72);
-}
-
-body .sider-ac14ac .appName-ac14ac {
-  color: #111114;
-}
-
-[data-ds-dark-theme] .sider-ac14ac {
-  --dsw-specific-sidebar-nav-item-active-accent: rgba(255, 255, 255, 0.1);
-  --dsw-specific-sidebar-nav-item-hover: rgba(255, 255, 255, 0.06);
-  --dsw-alias-brand-primary: #f2f2f7;
-  --dsw-alias-brand-primary-invert: #f2f2f7;
-
-  border-color: rgba(255, 255, 255, 0.08);
-  background: linear-gradient(180deg, rgba(38, 38, 42, 0.72) 0%, rgba(22, 22, 24, 0.66) 100%);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06);
-}
-
-[data-ds-dark-theme] .sider-ac14ac .appName-ac14ac {
-  color: #f2f2f7;
-}
-
-/* ---- 2. 聊天顶栏：玻璃条 ---- */
-.header-cf83dc {
-  background: rgba(255, 255, 255, 0.62);
-  -webkit-backdrop-filter: blur(22px) saturate(1.12);
-  backdrop-filter: blur(22px) saturate(1.12);
-  border-bottom: 1px solid rgba(17, 17, 20, 0.06);
-}
-
-[data-ds-dark-theme] .header-cf83dc {
-  background: rgba(22, 22, 24, 0.62);
-  border-bottom-color: rgba(255, 255, 255, 0.08);
-}
+/* 侧边栏与移动顶栏的玻璃样式已收入对应组件，避免构建类名变化后失效。 */
 
 /* 去掉「已思考（用时 N 秒）」前面的彩色小图标 */
 .titleIcon-_3d93a {

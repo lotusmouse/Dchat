@@ -347,3 +347,41 @@
     cursor: not-allowed;
   }
 }
+
+@media not all and (min-width: 768px) {
+  .wrapper {
+    --input-padding-top: 16px;
+    border-radius: 28px;
+  }
+
+  .textarea,
+  .mirror {
+    min-height: 58px;
+    padding: var(--input-padding-top) 14px 0 18px;
+  }
+
+  .functionRow {
+    gap: 4px;
+    margin-top: 0;
+    padding: 8px 12px 12px;
+  }
+
+  .toggles {
+    gap: 6px;
+  }
+
+  .toggle {
+    height: 36px;
+    padding: 0 10px;
+  }
+
+  .right {
+    gap: 0;
+  }
+
+  .sendButton {
+    width: 38px;
+    height: 38px;
+    margin-left: 4px;
+  }
+}
