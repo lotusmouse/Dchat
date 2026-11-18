@@ -377,10 +377,10 @@
       var it = s.items[i];
       if (!it.enabled || !it.text.trim()) continue;
       if (it.kind === 'summary') summaries.push(it.text.trim());
-      else facts.push(it.text.trim());
+      else facts.push({ id: it.id, text: it.text.trim() });
     }
     var parts = [];
-    if (facts.length) parts.push('【长期记忆】\n' + facts.map(function (t) { return '- ' + t; }).join('\n'));
+    if (facts.length) parts.push('【长期记忆】\n' + facts.map(function (it) { return '- [' + it.id + '] ' + it.text; }).join('\n'));
     if (summaries.length) parts.push('【上下文摘要】\n' + summaries.join('\n\n'));
     return parts.join('\n\n');
   }
@@ -393,6 +393,10 @@
       var out;
       if (base.indexOf('{{memory}}') >= 0) out = base.replace(/\{\{memory\}\}/g, mem).trim();
       else out = !mem ? base : (base ? base + '\n\n' : '') + mem;
+      if (s.autoMemory) {
+        var capability = '【记忆能力】\n你可以调用 update_memory 工具维护长期记忆。只在用户透露长期稳定且今后有用的信息时主动调用；不要记录一次性任务、临时情绪、闲聊细节或敏感信息。没有值得保存的内容时不要调用。';
+        out = (out ? out + '\n\n' : '') + capability;
+      }
       return out || DEFAULT_SYSTEM;
     } catch (e) {
       return DEFAULT_SYSTEM;
@@ -684,6 +688,51 @@
     return done;
   }
 
+  function memoryTools() {
+    if (!getSettings().autoMemory) return [];
+    return [{
+      type: 'custom',
+      name: 'update_memory',
+      description: '在长期稳定且今后有用的用户信息出现时写入、更新或删除长期记忆。一次性任务、临时情绪、闲聊细节和敏感信息不要记录；没有值得保存的内容时不要调用。新增前根据已有记忆去重，更新或删除时使用记忆条目 id。',
+      input_schema: {
+        type: 'object',
+        properties: {
+          ops: {
+            type: 'array',
+            description: '本轮需要执行的记忆变更；没有变更时不要调用本工具。',
+            items: {
+              type: 'object',
+              properties: {
+                op: { type: 'string', enum: ['add', 'update', 'delete'] },
+                id: { type: 'string', description: 'update 或 delete 时填写已有记忆 id' },
+                text: { type: 'string', description: 'add 或 update 时填写简洁、明确的记忆内容' }
+              },
+              required: ['op'],
+              additionalProperties: false
+            }
+          }
+        },
+        required: ['ops'],
+        additionalProperties: false
+      }
+    }];
+  }
+
+  function executeMemoryTool(call) {
+    if (!call || call.name !== 'update_memory') {
+      return { content: '不支持的记忆工具：' + String(call && call.name), isError: true };
+    }
+    if (!getSettings().autoMemory) {
+      return { content: '自动记忆已关闭，当前只有读取记忆库的权限', isError: true };
+    }
+    var ops = parseOps(JSON.stringify(call.input || {}));
+    var done = applyOps(ops);
+    if (done.length) {
+      window.dispatchEvent(new CustomEvent('dshx:memory', { detail: { source: 'ai', ops: done } }));
+    }
+    return { content: JSON.stringify({ ok: true, applied: done.length, ops: done }) };
+  }
+
   function listForAgent(s) {
     var lines = [];
     for (var i = 0; i < s.items.length; i++) {
@@ -723,7 +772,7 @@
       });
       var ops = parseOps(text);
       var done = applyOps(ops);
-      if (done.length) window.dispatchEvent(new CustomEvent('dshx:memory', { detail: { ops: done } }));
+      if (done.length) window.dispatchEvent(new CustomEvent('dshx:memory', { detail: { source: 'manual', ops: done } }));
       return { ops: done, applies: done.length };
     } finally {
       memBusy = false;
@@ -920,25 +969,9 @@
     window.dispatchEvent(new CustomEvent('dshx:turn', { detail: payload }));
 
     var s = getSettings();
-    // 后台：AI 自主记忆
-    if (s.autoMemory && s.memoryEnabled && getKey()) {
-      var userText = '';
-      var snap = lastSnapshot();
-      for (var i = snap.length - 1; i >= 0; i--) {
-        if (snap[i] && snap[i].role === 'user') {
-          userText = textOf(snap[i]);
-          break;
-        }
-      }
-      if ((userText + acc.text).length > 12) {
-        setTimeout(function () {
-          memoryNow().catch(function () {});
-        }, 400);
-      }
-    }
+    // 自动记忆由主对话里的 update_memory 工具执行，这里不再另发总结请求。
     // 后台：长对话自动压缩
     if (s.autoCompress) {
-      var sent = api.lastCtx ? api.lastCtx.kept : 0;
       var tokens = api.lastCtx ? api.lastCtx.tokens : 0;
       if (tokens >= (s.compressAt || 100000)) {
         setTimeout(function () {
@@ -988,11 +1021,13 @@
   /* ---------------- 对外 API ---------------- */
 
   var api = {
-    // 被 bundle 补丁调用的四个钩子
+    // 被 bundle 补丁调用的请求钩子
     sys: sys,
     ctx: ctx,
     model: model,
     safety: safety,
+    memoryTools: memoryTools,
+    executeMemoryTool: executeMemoryTool,
     // 外观
     getCustomCss: getCustomCss,
     getCustomCssAi: getCustomCssAi,

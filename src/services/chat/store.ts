@@ -1,16 +1,24 @@
 import { create } from 'zustand'
 import { createId } from '../../utils/id.js'
 import { ApiError, streamMessage } from '../api/client.js'
-import type { ChatModel, CreateMessageRequest } from '../api/types.js'
+import type { ChatModel, CreateMessageRequest, ToolResultBlockParam } from '../api/types.js'
 import { extractFileIds, getFileErrorCode, isRetryableApiError } from '../api/errors.js'
 import { cancelUpload, describeUploadError, uploadAttachment, useUploads } from '../attachments.js'
 import { useSettings } from '../settings.js'
 import {
+  enhancementExecuteMemoryTool,
+  enhancementMemoryTools,
   enhancementMessages,
   enhancementModel,
   enhancementSafety,
   enhancementSystem,
 } from '../enhancement.js'
+import {
+  applyToolRoundEvent,
+  createToolRound,
+  getToolCalls,
+  toToolRoundParam,
+} from './toolRound.js'
 import { appendBranch, getVisibleMessages, normalizeSession, selectVersion } from './branches.js'
 import * as db from './db.js'
 import {
@@ -1002,40 +1010,81 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
           initial.thinking ?? false,
           latestReminder
         )
-        const events = streamMessage(
-          useSettings.getState().apiKey ?? '',
-          {
-            model: enhancementModel(initial.model ?? MODEL),
-            system: enhancementSystem(SYSTEM_PROMPT),
-            messages: enhancementMessages(messages),
-            thinking: { type: initial.thinking ? 'enabled' : 'disabled' },
-            safety_check: enhancementSafety(SAFETY_CHECK),
-            tools: serverTools(initial.search ?? false),
-            ...(titleRequests.has(controller) ? { title: { enabled: true } } : {}),
-          },
-          controller.signal
-        )
-        const blockIndexes = new Map<number, number>()
-        for await (const event of events) {
-          receivedContent ||= event.type === 'content_block_start'
-          if (
-            event.type === 'message_delta' &&
-            (event.delta.stop_reason === 'end_turn' || event.delta.stop_reason === 'max_tokens') &&
-            event.delta.title?.trim() &&
-            titleRequests.has(controller) &&
-            !controller.signal.aborted &&
-            !get().importingHistory
-          ) {
-            const title = event.delta.title.trim()
-            updateSession(sessionId, (session) => (session.title ? session : { ...session, title }))
-            titleRequests.delete(controller)
+        let requestMessages = enhancementMessages(messages)
+        const tools = [...serverTools(initial.search ?? false), ...enhancementMemoryTools()]
+        // 客户端工具在同一轮对话内执行，拿到结果后继续请求，直到模型给出正常回复。
+        for (let toolRoundIndex = 0; ; toolRoundIndex += 1) {
+          const toolRound = createToolRound()
+          const events = streamMessage(
+            useSettings.getState().apiKey ?? '',
+            {
+              model: enhancementModel(initial.model ?? MODEL),
+              system: enhancementSystem(SYSTEM_PROMPT),
+              messages: requestMessages,
+              thinking: { type: initial.thinking ? 'enabled' : 'disabled' },
+              safety_check: enhancementSafety(SAFETY_CHECK),
+              tools,
+              ...(titleRequests.has(controller) ? { title: { enabled: true } } : {}),
+            },
+            controller.signal
+          )
+          const blockIndexes = new Map<number, number>()
+          for await (const event of events) {
+            receivedContent ||= event.type === 'content_block_start'
+            applyToolRoundEvent(toolRound, event)
+            if (
+              event.type === 'message_delta' &&
+              (event.delta.stop_reason === 'end_turn' || event.delta.stop_reason === 'max_tokens') &&
+              event.delta.title?.trim() &&
+              titleRequests.has(controller) &&
+              !controller.signal.aborted &&
+              !get().importingHistory
+            ) {
+              const title = event.delta.title.trim()
+              updateSession(sessionId, (session) =>
+                session.title ? session : { ...session, title }
+              )
+              titleRequests.delete(controller)
+            }
+            reply = applyEvent(reply, event, Date.now(), blockIndexes)
+            if (document.visibilityState === 'hidden') {
+              flush()
+            } else {
+              frame ||= requestAnimationFrame(flush)
+            }
           }
-          reply = applyEvent(reply, event, Date.now(), blockIndexes)
-          if (document.visibilityState === 'hidden') {
-            flush()
-          } else {
-            frame ||= requestAnimationFrame(flush)
+          if (toolRound.stopReason !== 'tool_use') {
+            break
           }
+          const calls = getToolCalls(toolRound)
+          if (!calls.length || toolRoundIndex >= 4) {
+            throw new Error('客户端工具调用未能完成')
+          }
+          const results: ToolResultBlockParam[] = calls.map((call) => {
+            try {
+              const result = enhancementExecuteMemoryTool(call)
+              return {
+                type: 'tool_result',
+                tool_use_id: call.id,
+                content: result.content,
+                ...(result.isError ? { is_error: true } : {}),
+              }
+            } catch (error) {
+              return {
+                type: 'tool_result',
+                tool_use_id: call.id,
+                content: error instanceof Error ? error.message : String(error),
+                is_error: true,
+              }
+            }
+          })
+          requestMessages = [
+            ...requestMessages,
+            toToolRoundParam(toolRound),
+            { role: 'user', content: results },
+          ]
+          // 工具中间态不是最终回答；正常响应结束后仍可按 max_tokens 续写。
+          reply = { ...reply, prefix: initial.prefix }
         }
         reply = settleReply(reply, 'done', Date.now())
         break

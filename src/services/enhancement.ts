@@ -1,4 +1,9 @@
-import type { ChatModel, CreateMessageRequest, MessageParam } from './api/types.js'
+import type {
+  ChatModel,
+  CreateMessageRequest,
+  MessageParam,
+  ToolUseBlock,
+} from './api/types.js'
 
 export type EnhancementMemoryItem = {
   id: string
@@ -27,11 +32,15 @@ export type EnhancementBalance = {
   total: string
 }
 
+type MemoryToolResult = { content: string; isError?: boolean }
+
 type EnhancementCore = {
   model(): string
   sys(): string
   ctx(messages: MessageParam[]): MessageParam[]
   safety(): { level: 'high' } | undefined
+  memoryTools(): CreateMessageRequest['tools']
+  executeMemoryTool(call: ToolUseBlock): MemoryToolResult
   getSettings(): EnhancementSettings
   saveSettings(patch: Partial<EnhancementSettings>): EnhancementSettings
   defaults: EnhancementSettings
@@ -84,3 +93,13 @@ export const enhancementSafety = (
   fallback: CreateMessageRequest['safety_check']
 ): CreateMessageRequest['safety_check'] =>
   (enhancementCore()?.safety() ?? fallback) as CreateMessageRequest['safety_check']
+
+/** 只有允许 AI 写入时才声明工具；读取已有记忆由 sys() 独立控制。 */
+export const enhancementMemoryTools = (): CreateMessageRequest['tools'] =>
+  enhancementCore()?.memoryTools() ?? []
+
+export const enhancementExecuteMemoryTool = (call: ToolUseBlock): MemoryToolResult =>
+  enhancementCore()?.executeMemoryTool(call) ?? {
+    content: '记忆功能当前不可用',
+    isError: true,
+  }

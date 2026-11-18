@@ -294,8 +294,8 @@ const EnhancementContent = ({ core }: { core: Core }) => {
       </Section>
 
       <Section title="长期记忆">
-        <Row label="自动记忆" description="每轮对话后自动整理长期信息" action={<Toggle label="自动记忆" checked={settings.autoMemory} onChange={() => update({ autoMemory: !settings.autoMemory })} />} />
-        <Row label="注入到提示词" description="将启用的记忆和摘要加入模型上下文" action={<Toggle label="注入到提示词" checked={settings.memoryEnabled} onChange={() => update({ memoryEnabled: !settings.memoryEnabled })} />} />
+        <Row label="自动记忆" description="允许 AI 在对话中自行判断是否写入；关闭后仅禁止写入，不影响读取" action={<Toggle label="自动记忆" checked={settings.autoMemory} onChange={() => update({ autoMemory: !settings.autoMemory })} />} />
+        <Row label="读取记忆库" description="将已有记忆和摘要提供给 AI；与自动记忆开关互不影响" action={<Toggle label="读取记忆库" checked={settings.memoryEnabled} onChange={() => update({ memoryEnabled: !settings.memoryEnabled })} />} />
         <div className={styles.enhanceMemoryAdd}>
           <input className={styles.enhanceInput} value={newMemory} onChange={(event) => setNewMemory(event.target.value)} placeholder="手动添加一条记忆" />
           <Button variant="outlined" size="m" onClick={addMemory}>添加</Button>
@@ -312,7 +312,7 @@ const EnhancementContent = ({ core }: { core: Core }) => {
           ))}
           {!settings.items.length ? <div className={styles.description}>还没有记忆。</div> : null}
         </div>
-        <Button variant="outlined" size="m" disabled={busy} onClick={() => void run(async () => { const result = await core.memoryNow(); showToast(result.skipped ? '已有整理任务在进行' : `记忆整理完成，${result.applies ?? 0} 项变更`) })}>现在整理一次</Button>
+        <Button variant="outlined" size="m" disabled={busy} onClick={() => void run(async () => { const result = await core.memoryNow(); showToast(result.skipped ? '已有整理任务在进行' : `记忆整理完成，${result.applies ?? 0} 项变更`) })}>让 AI 整理一次</Button>
       </Section>
 
       <Section title="上下文与用量">

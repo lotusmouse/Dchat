@@ -125,6 +125,14 @@ export type ToolUseBlock = { type: 'tool_use'; id: string; name: string; input: 
 
 export type TextBlockParam = { type: 'text'; text: string }
 
+/** 客户端工具的执行结果，紧随包含对应 tool_use 的 assistant 消息回传。 */
+export type ToolResultBlockParam = {
+  type: 'tool_result'
+  tool_use_id: string
+  content: string
+  is_error?: boolean
+}
+
 /**
  * 文件块：引用经 Files API 上传的文件，图片用 image、其余用 document；
  * 图片请求需带 anthropic-beta: files-api-2025-04-14；扩展模式不支持 document，返回 400。
@@ -149,6 +157,7 @@ export type WebFetchToolResultBlockParam = WebFetchToolResultBlock
 export type AssistantBlockParam =
   | TextBlockParam
   | ThinkingBlock
+  | ToolUseBlock
   | ServerToolUseBlockParam
   | WebSearchToolResultBlockParam
   | WebFetchToolResultBlockParam
@@ -157,7 +166,10 @@ export type AssistantBlockParam =
 export type MessageParam =
   /** Chat Engine 扩展角色，位于对应 user 前；需服务端支持 latest_reminder。 */
   | { role: 'latest_reminder'; content: string }
-  | { role: 'user'; content: string | (FileBlockParam | TextBlockParam)[] }
+  | {
+      role: 'user'
+      content: string | (FileBlockParam | TextBlockParam | ToolResultBlockParam)[]
+    }
   | { role: 'assistant'; content: AssistantBlockParam[] }
 
 /** 开启联网搜索与边想边搜 */
@@ -172,12 +184,25 @@ export type DeepseekReadUrlTool = {
   name: 'deepseek_read_url'
 }
 
+/** 由本地应用执行的 Anthropic 兼容自定义工具。 */
+export type ClientTool = {
+  type: 'custom'
+  name: string
+  description: string
+  input_schema: {
+    type: 'object'
+    properties: Record<string, unknown>
+    required?: string[]
+    additionalProperties?: boolean
+  }
+}
+
 export type CreateMessageRequest = {
   model: ChatModel
   system: string
   messages: MessageParam[]
   thinking: { type: 'enabled' | 'disabled' }
-  tools: (DeepseekWebSearchTool | DeepseekReadUrlTool)[]
+  tools: (DeepseekWebSearchTool | DeepseekReadUrlTool | ClientTool)[]
   safety_check: { level: 'high' }
   title?: { enabled: boolean }
 }

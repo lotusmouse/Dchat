@@ -66,8 +66,33 @@ export const App = () => {
         showToast(text)
       }
     }
+    const onMemory = (event: Event) => {
+      const detail = (event as CustomEvent<{ source?: unknown; ops?: unknown }>).detail
+      if (detail?.source !== 'ai' || !Array.isArray(detail.ops)) {
+        return
+      }
+      const changes = detail.ops.flatMap((op: unknown) => {
+        if (!op || typeof op !== 'object') {
+          return []
+        }
+        const change = op as { op?: unknown; text?: unknown }
+        if (change.op === 'delete') {
+          return ['AI 已删除一条记忆']
+        }
+        return typeof change.text === 'string' && change.text
+          ? [`AI 已记住：${change.text}`]
+          : []
+      })
+      if (changes.length) {
+        showToast(changes.join('；'))
+      }
+    }
     window.addEventListener('dshx:toast', onEnhancementToast)
-    return () => window.removeEventListener('dshx:toast', onEnhancementToast)
+    window.addEventListener('dshx:memory', onMemory)
+    return () => {
+      window.removeEventListener('dshx:toast', onEnhancementToast)
+      window.removeEventListener('dshx:memory', onMemory)
+    }
   }, [])
   useEffect(bindChatPersistence, [])
 
