@@ -39,3 +39,27 @@
   margin: 0 auto;
   padding-bottom: 24px;
 }
+
+/* 历史消息折叠入口 */
+.fold {
+  display: block;
+  width: 100%;
+  margin: 6px 0 14px;
+  padding: 10px 14px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 12px;
+  background-color: var(--dsw-alias-bg-base);
+  color: var(--dsw-alias-label-secondary);
+  font: inherit;
+  font-size: 13.5px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.fold:hover {
+  background-color: var(--dsw-alias-bg-layer-2);
+}
+
+.fold:active {
+  transform: scale(0.995);
+}

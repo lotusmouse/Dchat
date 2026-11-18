@@ -31,6 +31,8 @@ import styles from './MessageList.module.css'
 
 /** 距底部小于该值时视为在底部，流式内容增长时跟随 */
 const STICKY_THRESHOLD = 40
+/** 超过这么多条消息就折叠较早的部分，避免一屏渲染几百个节点 */
+const FOLD_AT = 20
 const EMPTY_VERSIONS: MessageVersions = { ids: [], index: -1 }
 
 export const MessageList = ({
@@ -49,6 +51,7 @@ export const MessageList = ({
   const scrollTopRef = useRef(0)
   const restoreScrollRef = useRef<{ messageId: string; top: number } | null>(null)
   const messages = getVisibleMessages(session)
+  const [expanded, setExpanded] = useState(false)
   const [previousVersions, setPreviousVersions] = useState(() =>
     buildMessageVersions(session, new Map())
   )
@@ -99,6 +102,10 @@ export const MessageList = ({
     scrollToBottom()
   }, [session.id, lastMessageId, scrollToBottom])
 
+  useEffect(() => {
+    setExpanded(false)
+  }, [session.id])
+
   useEffect(closeSearchPanel, [session.id, lastMessageId])
 
   const selectVersion = useCallback(
@@ -139,14 +146,25 @@ export const MessageList = ({
     return () => el.removeEventListener('scroll', onScroll)
   }, [isMobile, scrollToBottom])
 
-  const lastIndex = messages.length - 1
+  const foldedCount = expanded || messages.length <= FOLD_AT ? 0 : messages.length - FOLD_AT
+  const shown = foldedCount > 0 ? messages.slice(foldedCount) : messages
+  const lastIndex = shown.length - 1
   const uploadRetryId = getUploadRetryId(messages, streaming)
   return (
     <ScrollToBottomContext.Provider value={scrollToBottom}>
       <div ref={isMobile ? undefined : scrollRef} className={styles.container}>
         <div ref={isMobile ? scrollRef : undefined} className={styles.scroll}>
           <div ref={contentRef} className={styles.column}>
-            {messages.map((message, index) =>
+            {foldedCount > 0 ? (
+              <button
+                type="button"
+                className={styles.fold}
+                onClick={() => setExpanded(true)}
+              >
+                展开更早的 {foldedCount} 条消息
+              </button>
+            ) : null}
+            {shown.map((message, index) =>
               message.role === 'user' ? (
                 <UserMessage
                   key={message.id}
