@@ -184,9 +184,8 @@ export type DeepseekReadUrlTool = {
   name: 'deepseek_read_url'
 }
 
-/** 由本地应用执行的 Anthropic 兼容自定义工具。 */
+/** 由本地应用执行的客户端工具；DeepSeek 要求省略 type，不能按 Anthropic 写成 custom。 */
 export type ClientTool = {
-  type: 'custom'
   name: string
   description: string
   input_schema: {

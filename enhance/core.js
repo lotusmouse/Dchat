@@ -691,7 +691,7 @@
   function memoryTools() {
     if (!getSettings().autoMemory) return [];
     return [{
-      type: 'custom',
+      // DeepSeek 客户端工具必须省略 type；custom 会被误判为服务端工具并返回 422。
       name: 'update_memory',
       description: '在长期稳定且今后有用的用户信息出现时写入、更新或删除长期记忆。一次性任务、临时情绪、闲聊细节和敏感信息不要记录；没有值得保存的内容时不要调用。新增前根据已有记忆去重，更新或删除时使用记忆条目 id。',
       input_schema: {
