@@ -24,6 +24,7 @@
     memoryEnabled: true,
     items: [],
     autoMemory: true,
+    summaryEvery: 5,
     autoCompress: true,
     compressedHashes: [],
     compressAt: 100000,
@@ -301,6 +302,7 @@
     s.systemEnabled = s.systemEnabled !== false;
     s.memoryEnabled = s.memoryEnabled !== false;
     s.autoMemory = s.autoMemory !== false;
+    s.summaryEvery = Math.min(50, Math.max(0, Number(s.summaryEvery) === 0 ? 0 : Number(s.summaryEvery) || 5));
     s.autoCompress = s.autoCompress !== false;
     s.showUsage = s.showUsage !== false;
     s.items = Array.isArray(s.items) ? s.items.map(normalizeItem).filter(Boolean) : [];
@@ -393,10 +395,6 @@
       var out;
       if (base.indexOf('{{memory}}') >= 0) out = base.replace(/\{\{memory\}\}/g, mem).trim();
       else out = !mem ? base : (base ? base + '\n\n' : '') + mem;
-      if (s.autoMemory) {
-        var capability = '【记忆能力】\n你可以调用 update_memory 工具维护长期记忆。只在用户透露长期稳定且今后有用的信息时主动调用；不要记录一次性任务、临时情绪、闲聊细节或敏感信息。没有值得保存的内容时不要调用。';
-        out = (out ? out + '\n\n' : '') + capability;
-      }
       return out || DEFAULT_SYSTEM;
     } catch (e) {
       return DEFAULT_SYSTEM;
@@ -688,49 +686,83 @@
     return done;
   }
 
-  function memoryTools() {
-    if (!getSettings().autoMemory) return [];
-    return [{
-      // DeepSeek 客户端工具必须省略 type；custom 会被误判为服务端工具并返回 422。
-      name: 'update_memory',
-      description: '在长期稳定且今后有用的用户信息出现时写入、更新或删除长期记忆。一次性任务、临时情绪、闲聊细节和敏感信息不要记录；没有值得保存的内容时不要调用。新增前根据已有记忆去重，更新或删除时使用记忆条目 id。',
-      input_schema: {
-        type: 'object',
-        properties: {
-          ops: {
-            type: 'array',
-            description: '本轮需要执行的记忆变更；没有变更时不要调用本工具。',
-            items: {
-              type: 'object',
-              properties: {
-                op: { type: 'string', enum: ['add', 'update', 'delete'] },
-                id: { type: 'string', description: 'update 或 delete 时填写已有记忆 id' },
-                text: { type: 'string', description: 'add 或 update 时填写简洁、明确的记忆内容' }
-              },
-              required: ['op'],
-              additionalProperties: false
-            }
-          }
-        },
-        required: ['ops'],
-        additionalProperties: false
-      }
-    }];
+  var SUMMARY_SYSTEM =
+    '你是记忆总结器。把给定的对话压缩成一段精简的中文长期记忆，只保留：用户是谁（身份/称呼/职业）、稳定偏好与习惯、长期目标、明确的约定、正在进行的项目背景。' +
+    '不要记录一次性任务、临时情绪、闲聊天、能从对话直接看到且以后无用的内容，也不要记录密码、证件号等敏感信息。' +
+    '如果已有旧摘要，把它和新对话合并成一段，保持时间顺序，去掉过时或矛盾的信息。' +
+    '直接输出摘要正文，不要标题、不要解释、不要超过 400 字。';
+
+  var memBusy = false;
+  var SUMMARY_ID = 'auto_summary';
+  var TURN_KEY = 'dshx:turns';
+
+  /** 每完成一轮对话调用；满 N 轮后台总结一次 */
+  function turnDone() {
+    var s = getSettings();
+    if (!s.autoMemory) return;
+    var every = Number(s.summaryEvery) || 0;
+    if (every <= 0) return;
+    var n = Number(safeGet(TURN_KEY) || 0) + 1;
+    safeSet(TURN_KEY, String(n));
+    if (n % every !== 0) return;
+    setTimeout(function () {
+      summarizeNow({ take: Math.max(8, every * 2) }).catch(function () {});
+    }, 800);
   }
 
-  function executeMemoryTool(call) {
-    if (!call || call.name !== 'update_memory') {
-      return { content: '不支持的记忆工具：' + String(call && call.name), isError: true };
+  function resetTurns() {
+    safeSet(TURN_KEY, '0');
+  }
+
+  function autoSummary() {
+    var s = getSettings();
+    for (var i = 0; i < s.items.length; i++) {
+      if (s.items[i].kind === 'summary' && s.items[i].id === SUMMARY_ID) return s.items[i];
     }
-    if (!getSettings().autoMemory) {
-      return { content: '自动记忆已关闭，当前只有读取记忆库的权限', isError: true };
+    return null;
+  }
+
+  /** 把最近若干轮对话合并成一段长期记忆；opts.take 控制取多少条消息 */
+  async function summarizeNow(opts) {
+    if (memBusy) return { skipped: true };
+    var s = getSettings();
+    if (!getKey()) throw new Error('还没填 API Key');
+    var snap = lastSnapshot();
+    var convo = [];
+    for (var i = 0; i < snap.length; i++) {
+      if (snap[i] && (snap[i].role === 'user' || snap[i].role === 'assistant')) convo.push(snap[i]);
     }
-    var ops = parseOps(JSON.stringify(call.input || {}));
-    var done = applyOps(ops);
-    if (done.length) {
-      window.dispatchEvent(new CustomEvent('dshx:memory', { detail: { source: 'ai', ops: done } }));
+    var take = (opts && opts.take) || 12;
+    var tail = convo.slice(-take);
+    if (tail.length < 2) throw new Error('对话还太短，先聊两句再总结');
+    var body = transcriptFrom(tail, 12000);
+    if (!body.trim()) throw new Error('没有可总结的内容');
+    var prev = autoSummary();
+    memBusy = true;
+    try {
+      var text = await callAPI({
+        maxTokens: 600,
+        system: SUMMARY_SYSTEM,
+        messages: [
+          {
+            role: 'user',
+            content:
+              (prev ? '已有记忆摘要：\n' + prev.text + '\n\n' : '') + '最近的对话：\n' + body
+          }
+        ]
+      });
+      var t = String(text || '').trim();
+      if (!t) throw new Error('模型没有返回总结');
+      var items = s.items.filter(function (it) {
+        return !(it.kind === 'summary' && it.id === SUMMARY_ID);
+      });
+      items.push({ id: SUMMARY_ID, text: t.slice(0, 1500), enabled: true, kind: 'summary' });
+      saveSettings({ items: items });
+      window.dispatchEvent(new CustomEvent('dshx:memory', { detail: { source: 'auto', text: t } }));
+      return { applies: 1, text: t };
+    } finally {
+      memBusy = false;
     }
-    return { content: JSON.stringify({ ok: true, applied: done.length, ops: done }) };
   }
 
   function listForAgent(s) {
@@ -743,40 +775,8 @@
     return lines.join('\n') || '（空）';
   }
 
-  var memBusy = false;
-
-  async function memoryNow(opts) {
-    if (memBusy) return { skipped: true };
-    var s = getSettings();
-    if (!getKey()) throw new Error('还没有填写 API Key');
-    var snap = lastSnapshot();
-    var convo = [];
-    for (var i = 0; i < snap.length; i++) {
-      if (snap[i] && (snap[i].role === 'user' || snap[i].role === 'assistant')) convo.push(snap[i]);
-    }
-    var tail = convo.slice(-6);
-    if (!tail.length) throw new Error('还没有可整理的对话，先聊一句');
-    var body = transcriptFrom(tail, 8000);
-    if (!body.trim()) throw new Error('还没有可整理的对话');
-    memBusy = true;
-    try {
-      var text = await callAPI({
-        maxTokens: 400,
-        system: MEM_SYSTEM,
-        messages: [
-          {
-            role: 'user',
-            content: '当前记忆清单（id | 内容）：\n' + listForAgent(s) + '\n\n最近对话：\n' + body
-          }
-        ]
-      });
-      var ops = parseOps(text);
-      var done = applyOps(ops);
-      if (done.length) window.dispatchEvent(new CustomEvent('dshx:memory', { detail: { source: 'manual', ops: done } }));
-      return { ops: done, applies: done.length };
-    } finally {
-      memBusy = false;
-    }
+  function memoryNow() {
+    return summarizeNow({ take: 12 });
   }
 
   /* ---------------- 上下文压缩 ---------------- */
@@ -969,7 +969,7 @@
     window.dispatchEvent(new CustomEvent('dshx:turn', { detail: payload }));
 
     var s = getSettings();
-    // 自动记忆由主对话里的 update_memory 工具执行，这里不再另发总结请求。
+    // 记忆由 turnDone() 按轮数触发总结，这里只负责上下文压缩。
     // 后台：长对话自动压缩
     if (s.autoCompress) {
       var tokens = api.lastCtx ? api.lastCtx.tokens : 0;
@@ -1026,8 +1026,6 @@
     ctx: ctx,
     model: model,
     safety: safety,
-    memoryTools: memoryTools,
-    executeMemoryTool: executeMemoryTool,
     // 外观
     getCustomCss: getCustomCss,
     getCustomCssAi: getCustomCssAi,
@@ -1053,6 +1051,9 @@
     defaults: DEFAULTS,
     // 动作
     memoryNow: memoryNow,
+    summarizeNow: summarizeNow,
+    turnDone: turnDone,
+    resetTurns: resetTurns,
     compressNow: compressNow,
     resetCompression: resetCompression,
     fetchModels: fetchModels,

@@ -2,7 +2,6 @@ import type {
   ChatModel,
   CreateMessageRequest,
   MessageParam,
-  ToolUseBlock,
 } from './api/types.js'
 
 export type EnhancementMemoryItem = {
@@ -18,6 +17,8 @@ export type EnhancementSettings = {
   memoryEnabled: boolean
   items: EnhancementMemoryItem[]
   autoMemory: boolean
+  /** 每多少轮对话自动总结一次记忆；0 表示不自动总结 */
+  summaryEvery: number
   autoCompress: boolean
   compressedHashes: string[]
   compressAt: number
@@ -32,19 +33,16 @@ export type EnhancementBalance = {
   total: string
 }
 
-type MemoryToolResult = { content: string; isError?: boolean }
-
 type EnhancementCore = {
   model(): string
   sys(): string
   ctx(messages: MessageParam[]): MessageParam[]
   safety(): { level: 'high' } | undefined
-  memoryTools(): CreateMessageRequest['tools']
-  executeMemoryTool(call: ToolUseBlock): MemoryToolResult
+  turnDone(): void
   getSettings(): EnhancementSettings
   saveSettings(patch: Partial<EnhancementSettings>): EnhancementSettings
   defaults: EnhancementSettings
-  memoryNow(): Promise<{ applies?: number; skipped?: boolean }>
+  memoryNow(): Promise<{ applies?: number; skipped?: boolean; text?: string }>
   compressNow(): Promise<{ chars: number; compressed: number }>
   resetCompression(): void
   fetchModels(): Promise<string[]>
@@ -94,12 +92,7 @@ export const enhancementSafety = (
 ): CreateMessageRequest['safety_check'] =>
   (enhancementCore()?.safety() ?? fallback) as CreateMessageRequest['safety_check']
 
-/** 只有允许 AI 写入时才声明工具；读取已有记忆由 sys() 独立控制。 */
-export const enhancementMemoryTools = (): CreateMessageRequest['tools'] =>
-  enhancementCore()?.memoryTools() ?? []
-
-export const enhancementExecuteMemoryTool = (call: ToolUseBlock): MemoryToolResult =>
-  enhancementCore()?.executeMemoryTool(call) ?? {
-    content: '记忆功能当前不可用',
-    isError: true,
-  }
+/** 每完成一轮对话通知增强层；达到设定的轮数后会后台做一次记忆总结。 */
+export const enhancementTurnDone = (): void => {
+  enhancementCore()?.turnDone()
+}

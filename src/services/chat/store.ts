@@ -6,8 +6,7 @@ import { extractFileIds, getFileErrorCode, isRetryableApiError } from '../api/er
 import { cancelUpload, describeUploadError, uploadAttachment, useUploads } from '../attachments.js'
 import { useSettings } from '../settings.js'
 import {
-  enhancementExecuteMemoryTool,
-  enhancementMemoryTools,
+  enhancementTurnDone,
   enhancementMessages,
   enhancementModel,
   enhancementSafety,
@@ -1011,7 +1010,7 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
           latestReminder
         )
         let requestMessages = enhancementMessages(messages)
-        const tools = [...serverTools(initial.search ?? false), ...enhancementMemoryTools()]
+        const tools = serverTools(initial.search ?? false)
         // 客户端工具在同一轮对话内执行，拿到结果后继续请求，直到模型给出正常回复。
         for (let toolRoundIndex = 0; ; toolRoundIndex += 1) {
           const toolRound = createToolRound()
@@ -1021,7 +1020,9 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
               model: enhancementModel(initial.model ?? MODEL),
               system: enhancementSystem(SYSTEM_PROMPT),
               messages: requestMessages,
-              thinking: { type: initial.thinking ? 'enabled' : 'disabled' },
+              // 关闭深度思考时必须**省略** thinking 字段：
+              // 传 { type: 'disabled' } 会被服务端拒绝，表现为"不思考就发不出消息"
+              ...(initial.thinking ? { thinking: { type: 'enabled' as const } } : {}),
               safety_check: enhancementSafety(SAFETY_CHECK),
               tools,
               ...(titleRequests.has(controller) ? { title: { enabled: true } } : {}),
@@ -1087,6 +1088,8 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
           reply = { ...reply, prefix: initial.prefix }
         }
         reply = settleReply(reply, 'done', Date.now())
+        // 成功完成一轮：交给增强层计数，到 N 轮触发一次记忆总结
+        enhancementTurnDone()
         break
       } catch (error) {
         if (controller.signal.aborted) {
