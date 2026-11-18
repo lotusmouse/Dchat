@@ -1,17 +1,23 @@
 .header {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 30;
   display: flex;
   align-items: center;
-  flex-shrink: 0;
   box-sizing: border-box;
   height: 66px;
   padding: 12px 16px 6px;
   border: none;
   background: transparent;
+  pointer-events: none;
 }
 
 .menuButton,
 .actions {
   border: 1px solid rgba(0, 0, 0, 0.06);
+  pointer-events: auto;
   background: rgba(255, 255, 255, 0.76);
   -webkit-backdrop-filter: blur(20px);
   backdrop-filter: blur(20px);

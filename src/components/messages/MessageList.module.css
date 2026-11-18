@@ -27,6 +27,11 @@
     overscroll-behavior-y: contain;
     scrollbar-color: var(--scroll-color) transparent;
   }
+
+  .column {
+    padding-top: 66px;
+    padding-bottom: calc(160px + env(safe-area-inset-bottom));
+  }
 }
 
 .column {
