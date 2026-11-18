@@ -200,8 +200,8 @@ export type CreateMessageRequest = {
   model: ChatModel
   system: string
   messages: MessageParam[]
-  /** 仅在开启深度思考时下发；关闭时必须省略，不能传 disabled */
-  thinking?: { type: 'enabled' }
+  /** 开启时传 enabled，关闭时传 disabled；服务端若不接受 disabled 客户端会自动省略重试 */
+  thinking?: { type: 'enabled' | 'disabled' }
   tools: (DeepseekWebSearchTool | DeepseekReadUrlTool | ClientTool)[]
   safety_check: { level: 'high' }
   title?: { enabled: boolean }

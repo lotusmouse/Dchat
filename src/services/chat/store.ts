@@ -986,6 +986,7 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
   streamFlushes.set(sessionId, flush)
 
   try {
+    let omitThinking = false
     for (let attempt = 0; ; attempt += 1) {
       /** 附件补齐前出错属于上传失败，请求还没有发出 */
       let preparing = true
@@ -1018,9 +1019,7 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
               model: enhancementModel(initial.model ?? MODEL),
               system: enhancementSystem(SYSTEM_PROMPT),
               messages: requestMessages,
-              // 关闭深度思考时必须**省略** thinking 字段：
-              // 传 { type: 'disabled' } 会被服务端拒绝，表现为"不思考就发不出消息"
-              ...(initial.thinking ? { thinking: { type: 'enabled' as const } } : {}),
+              thinking: initial.thinking ? { type: 'enabled' as const } : omitThinking ? undefined : { type: 'disabled' as const },
               safety_check: enhancementSafety(SAFETY_CHECK),
               tools,
               ...(titleRequests.has(controller) ? { title: { enabled: true } } : {}),
@@ -1073,7 +1072,16 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
           })
           break
         }
-        // 附件失效：重新补传后重发。收到过内容块（含丢弃的客户端工具）后不自动重发。
+        // 服务端不接受 thinking.disabled 时：去掉该字段重试一次（此时等同默认关闭）
+        if (
+          !initial.thinking &&
+          !omitThinking &&
+          /thinking/i.test(String((error as Error)?.message ?? ''))
+        ) {
+          omitThinking = true
+          continue
+        }
+        // 附件失效：重新补传后重发。收到过内容块（含丢弃的客户端工具）后不自动重发。"
         if (
           attempt < FILE_RETRY_LIMIT &&
           !receivedContent &&
