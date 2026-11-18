@@ -333,10 +333,11 @@ const EnhancementContent = ({ core }: { core: Core }) => {
         <div className={styles.enhanceMemoryAdd}>
           <input className={styles.enhanceInput} value={model} onChange={(event) => setModel(event.target.value)} spellCheck={false} />
           <Button size="m" onClick={() => { const value = model.trim() || core.defaults.model; update({ model: value }); setModel(value); showToast(`已切换到 ${value}`) }}>保存模型</Button>
+        <div className={styles.description}>深度思考开启时用上方模型，默认 deepseek-flash；改成 deepseek-v4-pro 才会用 pro（更贵）。</div>
         </div>
         <Row label="可用模型" description={models.length ? models.join('、') : '从当前 API 服务拉取'} action={<Button variant="outlined" size="m" disabled={busy} onClick={() => void run(async () => { const result = await core.fetchModels(); setModels(result); showToast(`拉取到 ${result.length} 个模型`) })}>拉取模型</Button>} />
 
-        <Row label="深度思考关闭时" description="关闭思考时用的是这个模型。默认 flash，省钱；pro 只在手动选择时才会用" action={<input className={styles.enhanceInput} style={{ width: 160 }} value={settings.modelOff} onChange={(event) => update({ modelOff: event.target.value })} spellCheck={false} />} />        <Row label="内容风控" description="标准使用平台默认检查；加强会显式请求额外审核" action={<Select ariaLabel="内容风控" value={settings.safety} options={[{ value: 'standard', label: '标准' }, { value: 'high', label: '加强' }]} onChange={(safety) => update({ safety })} />} />
+        <Row label="深度思考关闭时" description="固定使用 deepseek-flash（省钱档），不可修改" action={<span className={styles.description}>deepseek-flash</span>} />
       </Section>
 
       <Section title="语音通话">

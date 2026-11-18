@@ -300,7 +300,7 @@
     }
     if (typeof s.system !== 'string') s.system = DEFAULT_SYSTEM;
     if (typeof s.model !== 'string' || !s.model.trim()) s.model = DEFAULT_MODEL;
-    if (typeof s.modelOff !== 'string' || !s.modelOff.trim()) s.modelOff = MODEL_OFF;
+    s.modelOff = MODEL_OFF; // 关闭思考固定用 flash，不允许改
     if (s.safety !== 'standard' && s.safety !== 'high') s.safety = 'standard';
     s.systemEnabled = s.systemEnabled !== false;
     s.memoryEnabled = s.memoryEnabled !== false;
