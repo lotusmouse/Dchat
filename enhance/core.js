@@ -29,7 +29,7 @@
     autoCompress: true,
     compressedHashes: [],
     compressAt: 100000,
-    model: 'deepseek-v4-pro',
+    model: 'deepseek-flash',
     modelOff: 'deepseek-flash',
     safety: 'standard',
     showUsage: true
@@ -402,6 +402,15 @@
     } catch (e) {
       return DEFAULT_SYSTEM;
     }
+  }
+
+  /** 一次性迁移：早先默认写成 deepseek-v4-pro，统一回到 flash；pro 只在手动选择时使用 */
+  function migrateModel() {
+    if (safeGet('dshx:model-default-flash') === '1') return;
+    safeSet('dshx:model-default-flash', '1');
+    try {
+      if (getSettings().model === 'deepseek-v4-pro') saveSettings({ model: DEFAULT_MODEL });
+    } catch (e) {}
   }
 
   function model(thinkingOn) {
@@ -1085,6 +1094,9 @@
 
   // 外观初始化放最后，整段包住，出错也不影响上面
   try {
+    try {
+      migrateModel();
+    } catch (e) {}
     if (typeof document !== 'undefined' && document.documentElement) {
       var dshxReapply = function () {
         try {
