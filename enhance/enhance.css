@@ -706,6 +706,9 @@ body.dchat-mobile-drawer-open #dshx-call-fab {
   pointer-events: none;
 }
 
+/* 深色主题：官方用 body.dark / body[data-ds-dark-theme="dark"] 标记，旧的 html[data-ds-theme] 选不到 */
+body.dark #dshx-call-fab,
+body[data-ds-dark-theme="dark"] #dshx-call-fab,
 html[data-ds-theme="dark"] #dshx-call-fab {
   background: transparent;
   color: #f2f2f7;
