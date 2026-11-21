@@ -703,16 +703,20 @@
   }
 
   var SUMMARY_SYSTEM =
-    '你是记忆总结器。把给定的对话压缩成一段精简的中文长期记忆，只保留：用户是谁（身份/称呼/职业）、稳定偏好与习惯、长期目标、明确的约定、正在进行的项目背景。' +
-    '不要记录一次性任务、临时情绪、闲聊天、能从对话直接看到且以后无用的内容，也不要记录密码、证件号等敏感信息。' +
-    '如果已有旧摘要，把它和新对话合并成一段，保持时间顺序，去掉过时或矛盾的信息。' +
-    '直接输出摘要正文，不要标题、不要解释、不要超过 400 字。';
+    '你是长期记忆整理器。阅读【已有记忆】和【新的对话】，把值得长期记住的信息拆成若干条互相独立、简短的记忆。\n' +
+    '规则：\n' +
+    '1. 每条只讲一件事，20-40 字，不要写成段落，一条里不要塞多个主题。\n' +
+    '2. 只记长期稳定的内容：身份、称呼、职业、稳定偏好、习惯、长期目标、明确约定、项目背景、技术选型。\n' +
+    '3. 不记：一次性任务、临时情绪、闲聊、密码/证件号等敏感信息，以及【已有记忆】里已经说过的内容。\n' +
+    '4. 新的对话里没有值得记的内容就返回空数组。\n' +
+    '5. 一次最多 8 条。\n' +
+    '只输出 JSON：{"items":["...","..."]}，不要输出任何别的文字。';
 
   var memBusy = false;
-  var SUMMARY_ID = 'auto_summary';
   var TURN_KEY = 'dshx:turns';
+  var CURSOR_KEY = 'dshx:mem-cursor';
 
-  /** 每完成一轮对话调用；满 N 轮后台总结一次 */
+  /** 每完成一轮对话调用；满 N 轮后台总结一次（只总结上次之后的新内容） */
   function turnDone() {
     var s = getSettings();
     if (!s.autoMemory) return;
@@ -722,24 +726,45 @@
     safeSet(TURN_KEY, String(n));
     if (n % every !== 0) return;
     setTimeout(function () {
-      summarizeNow({ take: Math.max(8, every * 2) }).catch(function () {});
+      summarizeNow().catch(function () {});
     }, 800);
   }
 
   function resetTurns() {
     safeSet(TURN_KEY, '0');
+    safeSet(CURSOR_KEY, '0');
   }
 
-  function autoSummary() {
-    var s = getSettings();
-    for (var i = 0; i < s.items.length; i++) {
-      if (s.items[i].kind === 'summary' && s.items[i].id === SUMMARY_ID) return s.items[i];
+  function normText(v) {
+    return String(v || '')
+      .replace(/\s+/g, '')
+      .toLowerCase();
+  }
+
+  function parseMemItems(text) {
+    var t = String(text || '').trim();
+    var a = t.indexOf('{');
+    var b = t.lastIndexOf('}');
+    if (a < 0 || b <= a) return [];
+    var obj;
+    try {
+      obj = JSON.parse(t.slice(a, b + 1));
+    } catch (e) {
+      return [];
     }
-    return null;
+    var arr = obj && Array.isArray(obj.items) ? obj.items : [];
+    var out = [];
+    for (var i = 0; i < arr.length; i++) {
+      var v = typeof arr[i] === 'string' ? arr[i].trim() : '';
+      if (!v) continue;
+      if (v.length > 80) v = v.slice(0, 80);
+      out.push(v);
+    }
+    return out.slice(0, 8);
   }
 
-  /** 把最近若干轮对话合并成一段长期记忆；opts.take 控制取多少条消息 */
-  async function summarizeNow(opts) {
+  /** 只总结「上次总结之后」的新对话，并拆成多条短记忆 */
+  async function summarizeNow() {
     if (memBusy) return { skipped: true };
     var s = getSettings();
     if (!getKey()) throw new Error('还没填 API Key');
@@ -748,37 +773,65 @@
     for (var i = 0; i < snap.length; i++) {
       if (snap[i] && (snap[i].role === 'user' || snap[i].role === 'assistant')) convo.push(snap[i]);
     }
-    var take = (opts && opts.take) || 12;
-    var tail = convo.slice(-take);
-    if (tail.length < 2) throw new Error('对话还太短，先聊两句再总结');
-    var body = transcriptFrom(tail, 12000);
+    var cursor = Number(safeGet(CURSOR_KEY) || 0) || 0;
+    // 换了会话 / 历史被清空：游标失效，从头开始
+    if (cursor > convo.length) cursor = 0;
+    var fresh = convo.slice(cursor);
+    if (fresh.length < 2) throw new Error('还没有新的对话可以总结');
+    var body = transcriptFrom(fresh, 12000);
     if (!body.trim()) throw new Error('没有可总结的内容');
-    var prev = autoSummary();
+
+    var existing = [];
+    for (var k = 0; k < s.items.length; k++) {
+      if (s.items[k].enabled) existing.push(normText(s.items[k].text));
+    }
+
     memBusy = true;
     try {
       var text = await callAPI({
-        maxTokens: 600,
+        maxTokens: 700,
         system: SUMMARY_SYSTEM,
         messages: [
           {
             role: 'user',
             content:
-              (prev ? '已有记忆摘要：\n' + prev.text + '\n\n' : '') + '最近的对话：\n' + body
+              '【已有记忆】\n' + listForAgent(s) + '\n\n【新的对话】\n' + body
           }
         ]
       });
-      var t = String(text || '').trim();
-      if (!t) throw new Error('模型没有返回总结');
-      var items = s.items.filter(function (it) {
-        return !(it.kind === 'summary' && it.id === SUMMARY_ID);
-      });
-      items.push({ id: SUMMARY_ID, text: t.slice(0, 1500), enabled: true, kind: 'summary' });
-      saveSettings({ items: items });
-      window.dispatchEvent(new CustomEvent('dshx:memory', { detail: { source: 'auto', text: t } }));
-      return { applies: 1, text: t };
+      var list = parseMemItems(text);
+      var items = s.items.slice();
+      var added = [];
+      for (var j = 0; j < list.length; j++) {
+        var v = list[j];
+        var key = normText(v);
+        if (!key || existing.indexOf(key) >= 0) continue;
+        if (items.length >= MAX_ITEMS) {
+          for (var x = 0; x < items.length; x++) {
+            if (items[x].kind !== 'summary') {
+              items.splice(x, 1);
+              break;
+            }
+          }
+        }
+        var id = 'm' + Math.random().toString(36).slice(2, 10);
+        items.push({ id: id, text: v, enabled: true, kind: 'fact' });
+        existing.push(key);
+        added.push(v);
+      }
+      if (added.length) saveSettings({ items: items });
+      safeSet(CURSOR_KEY, String(convo.length));
+      window.dispatchEvent(
+        new CustomEvent('dshx:memory', { detail: { source: 'auto', items: added } })
+      );
+      return { applies: added.length, items: added };
     } finally {
       memBusy = false;
     }
+  }
+
+  function memoryNow() {
+    return summarizeNow();
   }
 
   function listForAgent(s) {
@@ -789,10 +842,6 @@
       lines.push(it.id + ' | ' + it.text);
     }
     return lines.join('\n') || '（空）';
-  }
-
-  function memoryNow() {
-    return summarizeNow({ take: 12 });
   }
 
   /* ---------------- 上下文压缩 ---------------- */

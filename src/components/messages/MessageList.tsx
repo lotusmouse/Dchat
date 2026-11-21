@@ -51,7 +51,8 @@ export const MessageList = ({
   const scrollTopRef = useRef(0)
   const restoreScrollRef = useRef<{ messageId: string; top: number } | null>(null)
   const messages = getVisibleMessages(session)
-  const [expanded, setExpanded] = useState(false)
+  /** 额外展开的历史条数（每次 +20） */
+  const [extra, setExtra] = useState(0)
   const [previousVersions, setPreviousVersions] = useState(() =>
     buildMessageVersions(session, new Map())
   )
@@ -103,10 +104,31 @@ export const MessageList = ({
   }, [session.id, lastMessageId, scrollToBottom])
 
   useEffect(() => {
-    setExpanded(false)
+    setExtra(0)
   }, [session.id])
 
   useEffect(closeSearchPanel, [session.id, lastMessageId])
+
+  /** 展开历史前记下滚动位置，渲染后补回高度差，避免视野跳到顶部 */
+  const foldAnchor = useRef<{ top: number; height: number } | null>(null)
+  const expandOlder = useCallback(() => {
+    const el = scrollRef.current
+    if (el) {
+      foldAnchor.current = { top: el.scrollTop, height: el.scrollHeight }
+    }
+    setExtra((value) => value + FOLD_AT)
+  }, [])
+
+  useLayoutEffect(() => {
+    const anchor = foldAnchor.current
+    const el = scrollRef.current
+    if (!anchor || !el) {
+      return
+    }
+    foldAnchor.current = null
+    el.scrollTop = anchor.top + (el.scrollHeight - anchor.height)
+    scrollTopRef.current = el.scrollTop
+  }, [extra])
 
   const selectVersion = useCallback(
     (messageId: string, anchorTop: number) => {
@@ -146,7 +168,8 @@ export const MessageList = ({
     return () => el.removeEventListener('scroll', onScroll)
   }, [isMobile, scrollToBottom])
 
-  const foldedCount = expanded || messages.length <= FOLD_AT ? 0 : messages.length - FOLD_AT
+  const foldLimit = FOLD_AT + extra
+  const foldedCount = messages.length <= foldLimit ? 0 : messages.length - foldLimit
   const shown = foldedCount > 0 ? messages.slice(foldedCount) : messages
   const lastIndex = shown.length - 1
   const uploadRetryId = getUploadRetryId(messages, streaming)
@@ -156,12 +179,8 @@ export const MessageList = ({
         <div ref={isMobile ? scrollRef : undefined} className={styles.scroll}>
           <div ref={contentRef} className={styles.column}>
             {foldedCount > 0 ? (
-              <button
-                type="button"
-                className={styles.fold}
-                onClick={() => setExpanded(true)}
-              >
-                展开更早的 {foldedCount} 条消息
+              <button type="button" className={styles.fold} onClick={expandOlder}>
+                展开更早的 {Math.min(FOLD_AT, foldedCount)} 条（还有 {foldedCount} 条）
               </button>
             ) : null}
             {shown.map((message, index) =>
