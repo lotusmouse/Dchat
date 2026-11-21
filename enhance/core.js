@@ -370,7 +370,8 @@
   }
 
   function estTokens(chars) {
-    return Math.ceil(chars / 1.5);
+    // 中文大致 1 字 1 token，英文/代码约 4 字 1 token，混合取 0.85 保守估
+    return Math.ceil(chars * 0.85);
   }
 
   /* ---------------- 请求钩子 ---------------- */
@@ -1043,7 +1044,14 @@
     // 记忆由 turnDone() 按轮数触发总结，这里只负责上下文压缩。
     // 后台：长对话自动压缩
     if (s.autoCompress) {
-      var tokens = api.lastCtx ? api.lastCtx.tokens : 0;
+      // 优先用服务端返回的 input_tokens（真实计数）；没有才退回字符估算。
+      // 之前只用估算，而 estTokens 按 chars/1.5 算，中文场景比真实值小很多，
+      // 于是阈值 100k 永远到不了 —— 看起来就是「自动压缩没生效」。
+      var lu = api.lastUsage || {};
+      // 真实上下文大小 = 未缓存输入 + 缓存读取 + 缓存写入
+      var realInput = (lu.input || 0) + (lu.cacheRead || 0) + (lu.cacheWrite || 0);
+      var tokens = realInput || (api.lastCtx ? api.lastCtx.tokens : 0);
+      api.lastCtxTokens = tokens;
       if (tokens >= (s.compressAt || 100000)) {
         setTimeout(function () {
           compressNow().catch(function () {});

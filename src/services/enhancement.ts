@@ -60,7 +60,7 @@ type EnhancementCore = {
   getCustomCssAi(): string
   setCustomCssAi(value: string): void
   lastCtx: { kept: number; dropped: number; tokens: number } | null
-  lastUsage: { input: number; output: number; cacheRead: number } | null
+  lastUsage: { input: number; output: number; cacheRead: number; cacheWrite: number } | null
   lastBalance: (EnhancementBalance & { at: number }) | null
 }
 

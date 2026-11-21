@@ -319,9 +319,9 @@ const EnhancementContent = ({ core }: { core: Core }) => {
       </Section>
 
       <Section title="上下文与用量">
-        <Row label="自动压缩" description="达到阈值后保留最近 6 条原文，更早的内容整理为摘要" action={<Toggle label="自动压缩" checked={settings.autoCompress} onChange={() => update({ autoCompress: !settings.autoCompress })} />} />
+        <Row label="自动压缩" description="上下文达到阈值时，把较早的对话压成摘要，只保留最近 6 条原文" action={<Toggle label="自动压缩" checked={settings.autoCompress} onChange={() => update({ autoCompress: !settings.autoCompress })} />} />
         <Row label="压缩阈值" description="8,000 – 128,000 tokens" action={<input className={styles.enhanceNumber} type="number" min={8000} max={128000} step={1000} value={settings.compressAt} onChange={(event) => update({ compressAt: Math.min(128000, Math.max(8000, Number(event.target.value) || 100000)) })} />} />
-        {core.lastCtx ? <div className={styles.description}>上次请求：保留 {core.lastCtx.kept} 条{core.lastCtx.dropped ? `，压缩 ${core.lastCtx.dropped} 条` : ''}，约 {core.lastCtx.tokens} tokens。</div> : null}
+        {usage ? <div className={styles.description}>当前上下文约 {usage.input + usage.cacheRead + usage.cacheWrite} tokens（输入 {usage.input} + 缓存 {usage.cacheRead}），阈值 {settings.compressAt.toLocaleString()}；{usage.input + usage.cacheRead + usage.cacheWrite >= settings.compressAt ? '已超阈值，下一轮自动压缩' : '未达阈值'}</div> : <div className={styles.description}>发送一条消息后，这里显示当前上下文大小（服务端计数）。</div>}
         {usage ? <div className={styles.description}>最近用量：输入 {usage.input}，缓存命中 {usage.cacheRead}，输出 {usage.output}。</div> : <div className={styles.description}>发送一条消息后，这里会显示本轮用量。</div>}
         <div className={styles.enhanceActions}>
           <Button variant="outlined" size="m" disabled={busy} onClick={() => void run(async () => { const result = await core.compressNow(); showToast(`已将 ${result.compressed} 条消息压缩为摘要`) })}>立即压缩</Button>
