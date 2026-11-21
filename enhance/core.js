@@ -745,22 +745,22 @@
     var t = String(text || '').trim();
     var a = t.indexOf('{');
     var b = t.lastIndexOf('}');
-    if (a < 0 || b <= a) return [];
-    var obj;
+    if (a < 0 || b <= a) return { ok: false, items: [] };
+    var obj = null;
     try {
       obj = JSON.parse(t.slice(a, b + 1));
     } catch (e) {
-      return [];
+      return { ok: false, items: [] };
     }
-    var arr = obj && Array.isArray(obj.items) ? obj.items : [];
+    if (!obj || !Array.isArray(obj.items)) return { ok: false, items: [] };
     var out = [];
-    for (var i = 0; i < arr.length; i++) {
-      var v = typeof arr[i] === 'string' ? arr[i].trim() : '';
+    for (var i = 0; i < obj.items.length; i++) {
+      var v = typeof obj.items[i] === 'string' ? obj.items[i].trim() : '';
       if (!v) continue;
       if (v.length > 80) v = v.slice(0, 80);
       out.push(v);
     }
-    return out.slice(0, 8);
+    return { ok: true, items: out.slice(0, 8) };
   }
 
   /** 只总结「上次总结之后」的新对话，并拆成多条短记忆 */
@@ -799,7 +799,11 @@
           }
         ]
       });
-      var list = parseMemItems(text);
+      var parsed = parseMemItems(text);
+      if (!parsed.ok) {
+        throw new Error('模型返回的格式不对，未推进进度，可以再点一次');
+      }
+      var list = parsed.items;
       var items = s.items.slice();
       var added = [];
       for (var j = 0; j < list.length; j++) {
@@ -820,11 +824,12 @@
         added.push(v);
       }
       if (added.length) saveSettings({ items: items });
+      var ignored = list.length - added.length;
       safeSet(CURSOR_KEY, String(convo.length));
       window.dispatchEvent(
         new CustomEvent('dshx:memory', { detail: { source: 'auto', items: added } })
       );
-      return { applies: added.length, items: added };
+      return { applies: added.length, items: added, ignored: ignored };
     } finally {
       memBusy = false;
     }

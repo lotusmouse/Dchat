@@ -44,7 +44,7 @@ type EnhancementCore = {
   getSettings(): EnhancementSettings
   saveSettings(patch: Partial<EnhancementSettings>): EnhancementSettings
   defaults: EnhancementSettings
-  memoryNow(): Promise<{ applies?: number; skipped?: boolean; text?: string }>
+  memoryNow(): Promise<{ applies?: number; skipped?: boolean; ignored?: number; items?: string[] }>
   compressNow(): Promise<{ chars: number; compressed: number }>
   resetCompression(): void
   fetchModels(): Promise<string[]>
