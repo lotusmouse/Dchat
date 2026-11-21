@@ -442,13 +442,14 @@
       var s = getSettings();
       var out = full;
       if (s.compressedHashes.length) {
-        var skip = {};
-        for (var i = 0; i < s.compressedHashes.length; i++) skip[s.compressedHashes[i]] = true;
-        var kept = [];
-        for (var j = 0; j < full.length; j++) {
-          // 永远保留最后两条，避免把当前这一轮也压掉
-          if (j >= full.length - 2 || !skip[hashOf(full[j])]) kept.push(full[j]);
-        }
+        // 压缩后只保留最近若干轮：从末尾往回找到最近一条 user 作为起点，
+        // 保证序列以 user 开头、user/assistant 成对——逐条按哈希剔除会破坏交替，服务端直接 400，
+        // 表现就是「压缩完 AI 不回复」。
+        var keepRecent = 6;
+        var start = Math.max(0, full.length - keepRecent);
+        while (start > 0 && (!full[start] || full[start].role !== 'user')) start -= 1;
+        var kept = full.slice(start);
+        if (!kept.length) kept = full;
         out = kept;
       }
       // 首条不能是 assistant
