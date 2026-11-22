@@ -6,7 +6,6 @@ import { extractFileIds, getFileErrorCode, isRetryableApiError } from '../api/er
 import { cancelUpload, describeUploadError, uploadAttachment, useUploads } from '../attachments.js'
 import { useSettings } from '../settings.js'
 import {
-  enhancementTurnDone,
   enhancementMessages,
   enhancementModel,
   enhancementSafety,
@@ -1009,6 +1008,8 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
           latestReminder
         )
         let requestMessages = enhancementMessages(messages)
+        // 放在 messages 之后：ctx() 会顺便算出本轮召回，sys() 再把它塞进系统提示词
+        const system = enhancementSystem(SYSTEM_PROMPT)
         const tools = serverTools(initial.search ?? false)
         // 客户端工具在同一轮对话内执行，拿到结果后继续请求，直到模型给出正常回复。
         for (let toolRoundIndex = 0; ; toolRoundIndex += 1) {
@@ -1017,7 +1018,7 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
             useSettings.getState().apiKey ?? '',
             {
               model: enhancementModel(initial.model ?? MODEL, initial.thinking ?? false),
-              system: enhancementSystem(SYSTEM_PROMPT),
+              system,
               messages: requestMessages,
               thinking: initial.thinking ? { type: 'enabled' as const } : omitThinking ? undefined : { type: 'disabled' as const },
               safety_check: enhancementSafety(SAFETY_CHECK),
@@ -1055,8 +1056,6 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
           break
         }
         reply = settleReply(reply, 'done', Date.now())
-        // 成功完成一轮：交给增强层计数，到 N 轮触发一次记忆总结
-        enhancementTurnDone()
         break
       } catch (error) {
         if (controller.signal.aborted) {

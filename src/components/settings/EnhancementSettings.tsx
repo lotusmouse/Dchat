@@ -161,7 +161,7 @@ const EnhancementContent = ({ core }: { core: Core }) => {
       reader.onload = () => {
         try {
           const data = JSON.parse(String(reader.result)) as Partial<Settings>
-          const allowed: (keyof Settings)[] = ['system', 'systemEnabled', 'memoryEnabled', 'items', 'autoMemory', 'summaryEvery', 'autoCompress', 'compressedHashes', 'compressAt', 'model', 'modelOff', 'safety', 'showUsage']
+          const allowed: (keyof Settings)[] = ['system', 'systemEnabled', 'memoryEnabled', 'items', 'recallEnabled', 'recallTopK', 'autoCompress', 'compressedHashes', 'compressAt', 'model', 'modelOff', 'safety', 'showUsage']
           const patch: Partial<Settings> = {}
           for (const key of allowed) {
             if (Object.hasOwn(data, key)) {
@@ -293,29 +293,33 @@ const EnhancementContent = ({ core }: { core: Core }) => {
         </div>
       </Section>
 
-      <Section title="长期记忆">
-        <Row label="自动总结记忆" description="每 N 轮对话在后台自动总结一次；关闭后只能手动总结" action={<Toggle label="自动总结记忆" checked={settings.autoMemory} onChange={() => update({ autoMemory: !settings.autoMemory })} />} />
-        <Row label="总结间隔" description="每多少轮总结一次（0 = 不自动总结），默认 5" action={<input className={styles.enhanceNumber} type="number" min={0} max={50} step={1} value={settings.summaryEvery} onChange={(event) => update({ summaryEvery: Math.min(50, Math.max(0, Number(event.target.value) || 0)) })} />} />
-        <div className={styles.enhanceActions}>
-        <Button variant="outlined" size="m" disabled={busy} onClick={() => void run(async () => { const result = await core.memoryNow(); const n = result.applies ?? 0; const ignored = result.ignored ?? 0; showToast(result.skipped ? '已有总结任务在进行' : n > 0 ? '新增 ' + n + ' 条记忆' : ignored > 0 ? '这 ' + ignored + ' 条和已有记忆重复，已跳过' : '这段对话没有值得长期保存的内容') })}>立即总结一次</Button>
-        </div>
-        <Row label="读取记忆库" description="将已有记忆和摘要提供给 AI；与自动记忆开关互不影响" action={<Toggle label="读取记忆库" checked={settings.memoryEnabled} onChange={() => update({ memoryEnabled: !settings.memoryEnabled })} />} />
+      <Section title="常驻记忆">
+        <Row label="注入常驻记忆" description="把这些手写的记忆放进系统提示词，每轮都会带上" action={<Toggle label="注入常驻记忆" checked={settings.memoryEnabled} onChange={() => update({ memoryEnabled: !settings.memoryEnabled })} />} />
         <div className={styles.enhanceMemoryAdd}>
-          <input className={styles.enhanceInput} value={newMemory} onChange={(event) => setNewMemory(event.target.value)} placeholder="手动添加一条记忆" />
+          <input className={styles.enhanceInput} value={newMemory} onChange={(event) => setNewMemory(event.target.value)} placeholder="写一条长期有效的记忆" />
           <Button variant="outlined" size="m" onClick={addMemory}>添加</Button>
         </div>
         <div className={styles.enhanceMemoryList}>
-          {settings.items.map((item) => (
+          {settings.items.filter((item) => item.kind !== 'summary').map((item) => (
             <div className={styles.enhanceMemoryItem} key={item.id}>
               <div className={styles.enhanceMemoryMeta}>
-                <label><input type="checkbox" checked={item.enabled} onChange={() => updateItem(item.id, { enabled: !item.enabled })} /> {item.kind === 'summary' ? '上下文摘要' : '记忆'}</label>
+                <label><input type="checkbox" checked={item.enabled} onChange={() => updateItem(item.id, { enabled: !item.enabled })} /> 记忆</label>
                 <button type="button" onClick={() => removeMemory(item)}>删除</button>
               </div>
               <textarea className={styles.enhanceTextarea} rows={2} defaultValue={item.text} onBlur={(event) => updateItem(item.id, { text: event.target.value.trim() })} />
             </div>
           ))}
-          {!settings.items.length ? <div className={styles.description}>还没有记忆。</div> : null}
+          {!settings.items.filter((item) => item.kind !== 'summary').length ? <div className={styles.description}>还没有常驻记忆，手动添加即可。</div> : null}
         </div>
+      </Section>
+
+      <Section title="历史回忆">
+        <Row label="回忆过去的聊天" description="按关键词 + 向量检索历史对话，把最相关的几轮塞进本轮上下文" action={<Toggle label="回忆过去的聊天" checked={settings.recallEnabled} onChange={() => update({ recallEnabled: !settings.recallEnabled })} />} />
+        <Row label="每次召回" description="最多 3 轮（一问一答算一轮）" action={<input className={styles.enhanceNumber} type="number" min={1} max={3} step={1} value={settings.recallTopK} onChange={(event) => update({ recallTopK: Math.min(3, Math.max(1, Number(event.target.value) || 3)) })} />} />
+        <div className={styles.enhanceActions}>
+          <Button variant="outlined" size="m" disabled={busy} onClick={() => void run(async () => { const n = await core.refreshRecall(true); showToast('已索引 ' + n + ' 轮对话') })}>重建回忆索引</Button>
+        </div>
+        <div className={styles.description}>{core.lastRecall && core.lastRecall.length ? '上次召回：' + core.lastRecall.length + ' 轮（' + core.lastRecall.map((r) => r.user.slice(0, 16)).join(' / ') + '）' : '发一条消息后，这里显示本轮召回了什么。'}</div>
       </Section>
 
       <Section title="上下文与用量">

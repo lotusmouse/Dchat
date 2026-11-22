@@ -24,8 +24,8 @@
     systemEnabled: true,
     memoryEnabled: true,
     items: [],
-    autoMemory: true,
-    summaryEvery: 5,
+    recallEnabled: true,
+    recallTopK: 3,
     autoCompress: true,
     compressedHashes: [],
     compressAt: 100000,
@@ -258,6 +258,19 @@
     });
   }
 
+  /** 一次性清理：下线的「自动总结记忆」留下的 summary 条目，压缩摘要保留 */
+  function dropOldSummaries() {
+    if (safeGet('dshx:drop-old-summary') === '1') return;
+    safeSet('dshx:drop-old-summary', '1');
+    try {
+      var s = getSettings();
+      var kept = s.items.filter(function (it) {
+        return it.kind !== 'summary' || it.compress === true;
+      });
+      if (kept.length !== s.items.length) saveSettings({ items: kept });
+    } catch (e) {}
+  }
+
   function normalizeItem(it) {
     if (!it || typeof it !== 'object') return null;
     var text = typeof it.text === 'string' ? it.text : '';
@@ -304,8 +317,8 @@
     if (s.safety !== 'standard' && s.safety !== 'high') s.safety = 'standard';
     s.systemEnabled = s.systemEnabled !== false;
     s.memoryEnabled = s.memoryEnabled !== false;
-    s.autoMemory = s.autoMemory !== false;
-    s.summaryEvery = Math.min(50, Math.max(0, Number(s.summaryEvery) === 0 ? 0 : Number(s.summaryEvery) || 5));
+    s.recallEnabled = s.recallEnabled !== false;
+    s.recallTopK = Math.min(3, Math.max(1, Number(s.recallTopK) || 3));
     s.autoCompress = s.autoCompress !== false;
     s.showUsage = s.showUsage !== false;
     s.items = Array.isArray(s.items) ? s.items.map(normalizeItem).filter(Boolean) : [];
@@ -391,6 +404,160 @@
     return parts.join('\n\n');
   }
 
+  /* ---------------- 历史回忆（关键词 + 向量） ---------------- */
+
+  var VEC_DIM = 512;
+  var recallIndex = { at: 0, rounds: [] };
+  var RECALL_MIN_SCORE = 0.12;
+
+  function recallTokens(text) {
+    var t = String(text || '').toLowerCase();
+    var out = [];
+    var words = t.match(/[a-z0-9_]{2,}/g);
+    if (words) {
+      for (var i = 0; i < words.length; i++) out.push(words[i]);
+    }
+    var zh = t.replace(/[^\u4e00-\u9fa5]/g, '');
+    for (var j = 0; j + 1 < zh.length; j++) out.push(zh.slice(j, j + 2));
+    return out;
+  }
+
+  function hash32(str) {
+    var h = 2166136261;
+    for (var i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+  }
+
+  function recallVector(text) {
+    var toks = recallTokens(text);
+    var v = new Float32Array(VEC_DIM);
+    for (var i = 0; i < toks.length; i++) {
+      var h = hash32(toks[i]);
+      var idx = h % VEC_DIM;
+      v[idx] += (h >>> 31) & 1 ? -1 : 1;
+    }
+    var norm = 0;
+    for (var k = 0; k < VEC_DIM; k++) norm += v[k] * v[k];
+    norm = Math.sqrt(norm) || 1;
+    for (var k2 = 0; k2 < VEC_DIM; k2++) v[k2] /= norm;
+    return v;
+  }
+
+  function cosine(a, b) {
+    var s = 0;
+    for (var i = 0; i < VEC_DIM; i++) s += a[i] * b[i];
+    return s;
+  }
+
+  function overlapScore(qTokens, rTokens) {
+    if (!qTokens.length || !rTokens.length) return 0;
+    var set = {};
+    var i;
+    for (i = 0; i < rTokens.length; i++) set[rTokens[i]] = 1;
+    var hit = 0;
+    var seen = {};
+    for (i = 0; i < qTokens.length; i++) {
+      var t = qTokens[i];
+      if (seen[t]) continue;
+      seen[t] = 1;
+      if (set[t]) hit += 1;
+    }
+    return hit / Math.min(20, Object.keys(seen).length || 1);
+  }
+
+  function messageText(m) {
+    if (!m) return '';
+    if (m.role === 'user') return String(m.content || '');
+    var out = [];
+    var blocks = m.blocks || [];
+    for (var i = 0; i < blocks.length; i++) {
+      var b = blocks[i];
+      if (b && b.type === 'text' && typeof b.text === 'string') out.push(b.text);
+    }
+    return out.join('\n');
+  }
+
+  /** 扫一遍 IndexedDB 里的全部会话，切成「一问一答」的轮次并建索引 */
+  async function refreshRecall(force) {
+    if (!force && Date.now() - recallIndex.at < 30000) return recallIndex.rounds.length;
+    var db = await idbOpen();
+    try {
+      if (!db.objectStoreNames.contains('sessions')) return 0;
+      var sessions = await idbGetAll(db, 'sessions');
+      var rounds = [];
+      for (var i = 0; i < sessions.length; i++) {
+        var sess = sessions[i];
+        var msgs = sess && Array.isArray(sess.messages) ? sess.messages : [];
+        for (var j = 0; j < msgs.length; j++) {
+          var m = msgs[j];
+          if (!m || m.role !== 'user') continue;
+          var uText = messageText(m).trim();
+          var next = msgs[j + 1];
+          var aText = next && next.role === 'assistant' ? messageText(next).trim() : '';
+          if (!uText) continue;
+          var full = (uText + '\n' + aText).slice(0, 1200);
+          rounds.push({
+            sid: sess.id,
+            at: m.createdAt || 0,
+            user: uText.slice(0, 400),
+            answer: aText.slice(0, 400),
+            text: full,
+            vec: recallVector(full)
+          });
+          j += 1;
+        }
+      }
+      recallIndex = { at: Date.now(), rounds: rounds };
+      return rounds.length;
+    } finally {
+      try {
+        db.close();
+      } catch (e) {}
+    }
+  }
+
+  /** 用当前提问去召回最相关的几轮（默认 3 轮） */
+  function recallFor(queryText, topK) {
+    var q = String(queryText || '').trim();
+    if (!q || !recallIndex.rounds.length) return [];
+    var k = Math.max(1, Math.min(3, Number(topK) || 3));
+    var qv = recallVector(q);
+    var qt = recallTokens(q);
+    var scored = [];
+    for (var i = 0; i < recallIndex.rounds.length; i++) {
+      var r = recallIndex.rounds[i];
+      if (!r.text) continue;
+      var cos = cosine(qv, r.vec);
+      var kw = overlapScore(qt, recallTokens(r.text));
+      var score = cos * 0.6 + kw * 0.4;
+      if (score < RECALL_MIN_SCORE) continue;
+      scored.push({ score: score, round: r });
+    }
+    scored.sort(function (a, b) {
+      return b.score - a.score;
+    });
+    return scored.slice(0, k).map(function (x) {
+      return x.round;
+    });
+  }
+
+  function recallBlock(list) {
+    if (!list || !list.length) return '';
+    var lines = ['【相关回忆】（从你过去的聊天里检索到的片段，仅供参考）'];
+    for (var i = 0; i < list.length; i++) {
+      var r = list[i];
+      var when = r.at ? new Date(r.at) : null;
+      var stamp = when && !isNaN(when.getTime()) ? when.getMonth() + 1 + '/' + when.getDate() : '';
+      lines.push(
+        (stamp ? '(' + stamp + ') ' : '') + '用户：' + r.user + (r.answer ? '\n助手：' + r.answer : '')
+      );
+    }
+    return lines.join('\n');
+  }
+
   function sys() {
     try {
       var s = getSettings();
@@ -399,6 +566,8 @@
       var out;
       if (base.indexOf('{{memory}}') >= 0) out = base.replace(/\{\{memory\}\}/g, mem).trim();
       else out = !mem ? base : (base ? base + '\n\n' : '') + mem;
+      var rec = s.recallEnabled ? recallBlock(api.lastRecall) : '';
+      if (rec) out = (out ? out + '\n\n' : '') + rec;
       return out || DEFAULT_SYSTEM;
     } catch (e) {
       return DEFAULT_SYSTEM;
@@ -461,6 +630,18 @@
       }
       var chars = 0;
       for (var k = 0; k < out.length; k++) chars += sizeOf(out[k]);
+      try {
+        var lastUser = '';
+        for (var q = out.length - 1; q >= 0; q--) {
+          if (out[q] && out[q].role === 'user') {
+            lastUser = typeof out[q].content === 'string' ? out[q].content : '';
+            break;
+          }
+        }
+        api.lastRecall = s.recallEnabled && lastUser ? recallFor(lastUser, s.recallTopK) : [];
+      } catch (e) {
+        api.lastRecall = [];
+      }
       api.lastCtx = {
         at: Date.now(),
         total: full.length,
@@ -704,221 +885,6 @@
     return done;
   }
 
-  var SUMMARY_SYSTEM =
-    '你是长期记忆整理器。阅读【已有记忆】和【新的对话】，把值得长期记住的信息拆成若干条互相独立、简短的记忆。\n' +
-    '规则：\n' +
-    '1. 每条只讲一件事，20-40 字，不要写成段落，一条里不要塞多个主题。\n' +
-    '2. 只记长期稳定的内容：身份、称呼、职业、稳定偏好、习惯、长期目标、明确约定、项目背景、技术选型。\n' +
-    '3. 不记：一次性任务、临时情绪、闲聊、密码/证件号等敏感信息，以及【已有记忆】里已经说过的内容。\n' +
-    '4. 新的对话里没有值得记的内容就返回空数组。\n' +
-    '5. 一次最多 8 条。\n' +
-    '只输出 JSON：{"items":["...","..."]}，不要输出任何别的文字。';
-
-  var memBusy = false;
-  var TURN_KEY = 'dshx:turns';
-  var CURSOR_KEY = 'dshx:mem-cursor';
-
-  /** 每完成一轮对话调用；满 N 轮后台总结一次（只总结上次之后的新内容） */
-  function turnDone() {
-    var s = getSettings();
-    if (!s.autoMemory) return;
-    var every = Number(s.summaryEvery) || 0;
-    if (every <= 0) return;
-    var n = Number(safeGet(TURN_KEY) || 0) + 1;
-    safeSet(TURN_KEY, String(n));
-    if (n % every !== 0) return;
-    setTimeout(function () {
-      summarizeNow().catch(function () {});
-    }, 800);
-  }
-
-  function resetTurns() {
-    safeSet(TURN_KEY, '0');
-    safeSet(CURSOR_KEY, '0');
-  }
-
-  function normText(v) {
-    return String(v || '')
-      .replace(/\s+/g, '')
-      .toLowerCase();
-  }
-
-  function parseMemItems(text) {
-    var t = String(text || '').trim();
-    if (!t) return { ok: false, items: [] };
-
-    var clean = function (v) {
-      var s = typeof v === 'string' ? v.trim() : '';
-      if (!s) return '';
-      if (s.length > 80) s = s.slice(0, 80);
-      return s;
-    };
-
-    // 1) 标准对象 {"items":[...]}
-    var a = t.indexOf('{');
-    var b = t.lastIndexOf('}');
-    if (a >= 0 && b > a) {
-      var obj = null;
-      try {
-        obj = JSON.parse(t.slice(a, b + 1));
-      } catch (e) {
-        obj = null;
-      }
-      if (obj && Array.isArray(obj.items)) {
-        var out = [];
-        for (var i = 0; i < obj.items.length; i++) {
-          var v = clean(obj.items[i]);
-          if (v) out.push(v);
-        }
-        return { ok: true, items: out.slice(0, 8) };
-      }
-    }
-
-    // 2) 顶层数组 ["...","..."]
-    var la = t.indexOf('[');
-    var lb = t.lastIndexOf(']');
-    if (la >= 0 && lb > la) {
-      try {
-        var arr = JSON.parse(t.slice(la, lb + 1));
-        if (Array.isArray(arr)) {
-          var out2 = [];
-          for (var j = 0; j < arr.length; j++) {
-            var v2 = clean(arr[j]);
-            if (v2) out2.push(v2);
-          }
-          if (out2.length) return { ok: true, items: out2.slice(0, 8) };
-        }
-      } catch (e) {}
-    }
-
-    // 3) 输出被截断但能抠出完整字符串字面量（"items":["a","b","c  ← 断在这）
-    var seg = t.match(/"items"\s*:\s*\[([\s\S]*)/);
-    if (seg) {
-      var lits = seg[1].match(/"((?:[^"\\]|\\.){2,80})"/g);
-      if (lits && lits.length) {
-        var out3 = [];
-        for (var k = 0; k < lits.length; k++) {
-          var raw = lits[k].slice(1, -1);
-          var dec = raw;
-          try {
-            dec = JSON.parse('"' + raw + '"');
-          } catch (e) {
-            dec = raw;
-          }
-          var v3 = clean(dec);
-          if (v3) out3.push(v3);
-        }
-        if (out3.length) return { ok: true, items: out3.slice(0, 8) };
-      }
-    }
-
-    // 4) 模型没吐 JSON，但用了「1. / - / * 」列表：至少两条才算数，避免把一句道歉当成记忆
-    var lines = t.split('\n');
-    var bullets = [];
-    for (var m = 0; m < lines.length; m++) {
-      var line = lines[m].trim();
-      if (!/^([-*·•]|\d+[.、)])\s*/.test(line)) continue;
-      var item = line.replace(/^([-*·•]|\d+[.、)])\s*/, '').trim();
-      if (item.length < 4 || item.length > 80) continue;
-      bullets.push(item);
-    }
-    if (bullets.length >= 2) return { ok: true, items: bullets.slice(0, 8) };
-
-    return { ok: false, items: [] };
-  }
-
-  /** 只总结「上次总结之后」的新对话，并拆成多条短记忆 */
-  async function summarizeNow() {
-    if (memBusy) return { skipped: true };
-    var s = getSettings();
-    if (!getKey()) throw new Error('还没填 API Key');
-    var snap = lastSnapshot();
-    var convo = [];
-    for (var i = 0; i < snap.length; i++) {
-      if (snap[i] && (snap[i].role === 'user' || snap[i].role === 'assistant')) convo.push(snap[i]);
-    }
-    var cursor = Number(safeGet(CURSOR_KEY) || 0) || 0;
-    // 换了会话 / 历史被清空：游标失效，从头开始
-    if (cursor > convo.length) cursor = 0;
-    var fresh = convo.slice(cursor);
-    if (fresh.length < 2) throw new Error('还没有新的对话可以总结');
-    var body = transcriptFrom(fresh, 12000);
-    if (!body.trim()) throw new Error('没有可总结的内容');
-
-    var existing = [];
-    for (var k = 0; k < s.items.length; k++) {
-      if (s.items[k].enabled) existing.push(normText(s.items[k].text));
-    }
-
-    memBusy = true;
-    try {
-      var text = await callAPI({
-        maxTokens: 700,
-        system: SUMMARY_SYSTEM,
-        messages: [
-          {
-            role: 'user',
-            content:
-              '【已有记忆】\n' + listForAgent(s) + '\n\n【新的对话】\n' + body
-          }
-        ]
-      });
-      var parsed = parseMemItems(text);
-      if (!parsed.ok) {
-        // 再要一次，这次只强调格式；仍失败才报错
-        var retryText = await callAPI({
-          maxTokens: 900,
-          system: SUMMARY_SYSTEM,
-          messages: [
-            {
-              role: 'user',
-              content:
-                '只输出 JSON，形如 {"items":["一句话","又一件事"]}，不要任何解释。\n\n' +
-                '【已有记忆】\n' + listForAgent(s) + '\n\n【新的对话】\n' + body
-            }
-          ]
-        });
-        parsed = parseMemItems(retryText);
-      }
-      if (!parsed.ok) {
-        throw new Error('模型这次没按 JSON 返回，进度已保留，可以再点一次');
-      }
-      var list = parsed.items;
-      var items = s.items.slice();
-      var added = [];
-      for (var j = 0; j < list.length; j++) {
-        var v = list[j];
-        var key = normText(v);
-        if (!key || existing.indexOf(key) >= 0) continue;
-        if (items.length >= MAX_ITEMS) {
-          for (var x = 0; x < items.length; x++) {
-            if (items[x].kind !== 'summary') {
-              items.splice(x, 1);
-              break;
-            }
-          }
-        }
-        var id = 'm' + Math.random().toString(36).slice(2, 10);
-        items.push({ id: id, text: v, enabled: true, kind: 'fact' });
-        existing.push(key);
-        added.push(v);
-      }
-      if (added.length) saveSettings({ items: items });
-      var ignored = list.length - added.length;
-      safeSet(CURSOR_KEY, String(convo.length));
-      window.dispatchEvent(
-        new CustomEvent('dshx:memory', { detail: { source: 'auto', items: added } })
-      );
-      return { applies: added.length, items: added, ignored: ignored };
-    } finally {
-      memBusy = false;
-    }
-  }
-
-  function memoryNow() {
-    return summarizeNow();
-  }
-
   function listForAgent(s) {
     var lines = [];
     for (var i = 0; i < s.items.length; i++) {
@@ -958,7 +924,7 @@
       if (!text) throw new Error('模型没有返回摘要');
 
       var items = s.items.filter(function (it) { return it.kind !== 'summary'; });
-      items.unshift({ id: 's' + Math.random().toString(36).slice(2, 10), text: text, enabled: true, kind: 'summary' });
+      items.unshift({ id: 's' + Math.random().toString(36).slice(2, 10), text: text, enabled: true, kind: 'summary', compress: true });
 
       var hashes = s.compressedHashes.slice();
       for (var j = 0; j < old.length; j++) hashes.push(hashOf(old[j]));
@@ -1119,7 +1085,13 @@
     window.dispatchEvent(new CustomEvent('dshx:turn', { detail: payload }));
 
     var s = getSettings();
-    // 记忆由 turnDone() 按轮数触发总结，这里只负责上下文压缩。
+    // 每轮结束后在后台重建回忆索引（把这一轮也纳入）
+    if (s.recallEnabled) {
+      setTimeout(function () {
+        refreshRecall(true).catch(function () {});
+      }, 1500);
+    }
+    // 后台：上下文压缩
     // 后台：长对话自动压缩
     if (s.autoCompress) {
       // 优先用服务端返回的 input_tokens（真实计数）；没有才退回字符估算。
@@ -1207,10 +1179,9 @@
     saveSettings: saveSettings,
     defaults: DEFAULTS,
     // 动作
-    memoryNow: memoryNow,
-    summarizeNow: summarizeNow,
-    turnDone: turnDone,
-    resetTurns: resetTurns,
+    refreshRecall: refreshRecall,
+    recallFor: recallFor,
+    lastRecall: null,
     compressNow: compressNow,
     resetCompression: resetCompression,
     fetchModels: fetchModels,
@@ -1239,6 +1210,14 @@
       migrateModel();
     } catch (e) {}
     if (typeof document !== 'undefined' && document.documentElement) {
+      try {
+        dropOldSummaries();
+      } catch (e) {}
+      setTimeout(function () {
+        try {
+          refreshRecall(true).catch(function () {});
+        } catch (e) {}
+      }, 2000);
       var dshxReapply = function () {
         try {
           applyTheme();

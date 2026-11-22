@@ -16,9 +16,10 @@ export type EnhancementSettings = {
   systemEnabled: boolean
   memoryEnabled: boolean
   items: EnhancementMemoryItem[]
-  autoMemory: boolean
-  /** 每多少轮对话自动总结一次记忆；0 表示不自动总结 */
-  summaryEvery: number
+  /** 历史回忆（关键词 + 向量召回） */
+  recallEnabled: boolean
+  /** 每次最多召回几轮（1-3） */
+  recallTopK: number
   autoCompress: boolean
   compressedHashes: string[]
   compressAt: number
@@ -28,6 +29,8 @@ export type EnhancementSettings = {
   safety: 'standard' | 'high'
   showUsage: boolean
 }
+
+export type RecallRound = { user: string; answer: string }
 
 export type EnhancementBalance = {
   available: boolean
@@ -40,11 +43,11 @@ type EnhancementCore = {
   sys(): string
   ctx(messages: MessageParam[]): MessageParam[]
   safety(): { level: 'high' } | undefined
-  turnDone(): void
   getSettings(): EnhancementSettings
   saveSettings(patch: Partial<EnhancementSettings>): EnhancementSettings
   defaults: EnhancementSettings
-  memoryNow(): Promise<{ applies?: number; skipped?: boolean; ignored?: number; items?: string[] }>
+  refreshRecall(force?: boolean): Promise<number>
+  lastRecall: { user: string; answer: string }[] | null
   compressNow(): Promise<{ chars: number; compressed: number }>
   resetCompression(): void
   fetchModels(): Promise<string[]>
@@ -94,7 +97,3 @@ export const enhancementSafety = (
 ): CreateMessageRequest['safety_check'] =>
   (enhancementCore()?.safety() ?? fallback) as CreateMessageRequest['safety_check']
 
-/** 每完成一轮对话通知增强层；达到设定的轮数后会后台做一次记忆总结。 */
-export const enhancementTurnDone = (): void => {
-  enhancementCore()?.turnDone()
-}
