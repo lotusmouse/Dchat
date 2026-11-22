@@ -745,24 +745,86 @@
 
   function parseMemItems(text) {
     var t = String(text || '').trim();
+    if (!t) return { ok: false, items: [] };
+
+    var clean = function (v) {
+      var s = typeof v === 'string' ? v.trim() : '';
+      if (!s) return '';
+      if (s.length > 80) s = s.slice(0, 80);
+      return s;
+    };
+
+    // 1) 标准对象 {"items":[...]}
     var a = t.indexOf('{');
     var b = t.lastIndexOf('}');
-    if (a < 0 || b <= a) return { ok: false, items: [] };
-    var obj = null;
-    try {
-      obj = JSON.parse(t.slice(a, b + 1));
-    } catch (e) {
-      return { ok: false, items: [] };
+    if (a >= 0 && b > a) {
+      var obj = null;
+      try {
+        obj = JSON.parse(t.slice(a, b + 1));
+      } catch (e) {
+        obj = null;
+      }
+      if (obj && Array.isArray(obj.items)) {
+        var out = [];
+        for (var i = 0; i < obj.items.length; i++) {
+          var v = clean(obj.items[i]);
+          if (v) out.push(v);
+        }
+        return { ok: true, items: out.slice(0, 8) };
+      }
     }
-    if (!obj || !Array.isArray(obj.items)) return { ok: false, items: [] };
-    var out = [];
-    for (var i = 0; i < obj.items.length; i++) {
-      var v = typeof obj.items[i] === 'string' ? obj.items[i].trim() : '';
-      if (!v) continue;
-      if (v.length > 80) v = v.slice(0, 80);
-      out.push(v);
+
+    // 2) 顶层数组 ["...","..."]
+    var la = t.indexOf('[');
+    var lb = t.lastIndexOf(']');
+    if (la >= 0 && lb > la) {
+      try {
+        var arr = JSON.parse(t.slice(la, lb + 1));
+        if (Array.isArray(arr)) {
+          var out2 = [];
+          for (var j = 0; j < arr.length; j++) {
+            var v2 = clean(arr[j]);
+            if (v2) out2.push(v2);
+          }
+          if (out2.length) return { ok: true, items: out2.slice(0, 8) };
+        }
+      } catch (e) {}
     }
-    return { ok: true, items: out.slice(0, 8) };
+
+    // 3) 输出被截断但能抠出完整字符串字面量（"items":["a","b","c  ← 断在这）
+    var seg = t.match(/"items"\s*:\s*\[([\s\S]*)/);
+    if (seg) {
+      var lits = seg[1].match(/"((?:[^"\\]|\\.){2,80})"/g);
+      if (lits && lits.length) {
+        var out3 = [];
+        for (var k = 0; k < lits.length; k++) {
+          var raw = lits[k].slice(1, -1);
+          var dec = raw;
+          try {
+            dec = JSON.parse('"' + raw + '"');
+          } catch (e) {
+            dec = raw;
+          }
+          var v3 = clean(dec);
+          if (v3) out3.push(v3);
+        }
+        if (out3.length) return { ok: true, items: out3.slice(0, 8) };
+      }
+    }
+
+    // 4) 模型没吐 JSON，但用了「1. / - / * 」列表：至少两条才算数，避免把一句道歉当成记忆
+    var lines = t.split('\n');
+    var bullets = [];
+    for (var m = 0; m < lines.length; m++) {
+      var line = lines[m].trim();
+      if (!/^([-*·•]|\d+[.、)])\s*/.test(line)) continue;
+      var item = line.replace(/^([-*·•]|\d+[.、)])\s*/, '').trim();
+      if (item.length < 4 || item.length > 80) continue;
+      bullets.push(item);
+    }
+    if (bullets.length >= 2) return { ok: true, items: bullets.slice(0, 8) };
+
+    return { ok: false, items: [] };
   }
 
   /** 只总结「上次总结之后」的新对话，并拆成多条短记忆 */
@@ -803,7 +865,23 @@
       });
       var parsed = parseMemItems(text);
       if (!parsed.ok) {
-        throw new Error('模型返回的格式不对，未推进进度，可以再点一次');
+        // 再要一次，这次只强调格式；仍失败才报错
+        var retryText = await callAPI({
+          maxTokens: 900,
+          system: SUMMARY_SYSTEM,
+          messages: [
+            {
+              role: 'user',
+              content:
+                '只输出 JSON，形如 {"items":["一句话","又一件事"]}，不要任何解释。\n\n' +
+                '【已有记忆】\n' + listForAgent(s) + '\n\n【新的对话】\n' + body
+            }
+          ]
+        });
+        parsed = parseMemItems(retryText);
+      }
+      if (!parsed.ok) {
+        throw new Error('模型这次没按 JSON 返回，进度已保留，可以再点一次');
       }
       var list = parsed.items;
       var items = s.items.slice();
