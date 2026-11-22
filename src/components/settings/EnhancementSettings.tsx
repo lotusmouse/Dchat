@@ -15,7 +15,8 @@ const EnhancementPageContext = createContext<EnhancementPage>('home')
 const sectionPages: Record<string, EnhancementPage> = {
   账户: 'account',
   系统提示词: 'prompt',
-  长期记忆: 'memory',
+  常驻记忆: 'memory',
+  历史回忆: 'memory',
   上下文与用量: 'context',
   模型与风控: 'model',
   语音通话: 'voice',
@@ -25,7 +26,7 @@ const sectionPages: Record<string, EnhancementPage> = {
 const entries: { page: Exclude<EnhancementPage, 'home'>; label: string; description: string }[] = [
   { page: 'account', label: '账户', description: '余额查询与充值' },
   { page: 'prompt', label: '系统提示词', description: '自定义助手提示词' },
-  { page: 'memory', label: '长期记忆', description: '自动记忆与手动管理' },
+  { page: 'memory', label: '长期记忆', description: '常驻记忆与历史回忆' },
   { page: 'context', label: '上下文与用量', description: '上下文压缩与本轮用量' },
   { page: 'model', label: '模型与风控', description: '模型选择与内容风控' },
   { page: 'voice', label: '语音通话', description: '免手持与通话设置' },
