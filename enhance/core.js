@@ -544,6 +544,86 @@
     });
   }
 
+  function recallNorm(v) {
+    return String(v || '')
+      .replace(/\s+/g, '')
+      .toLowerCase();
+  }
+
+  function paramText(m) {
+    if (!m) return '';
+    if (typeof m.content === 'string') return m.content;
+    if (!Array.isArray(m.content)) return '';
+    var out = [];
+    for (var i = 0; i < m.content.length; i++) {
+      var b = m.content[i];
+      if (b && b.type === 'text' && typeof b.text === 'string') out.push(b.text);
+    }
+    return out.join('\n');
+  }
+
+  function containsAny(haystacks, needle) {
+    if (!needle) return false;
+    for (var i = 0; i < haystacks.length; i++) {
+      var h = haystacks[i];
+      if (!h) continue;
+      if (h.indexOf(needle) >= 0) return true;
+      // 反向只在不至于过度匹配时才比较（太短的片段容易误杀）
+      if (h.length >= 6 && needle.indexOf(h) >= 0) return true;
+    }
+    return false;
+  }
+
+  /** 已经在「本轮上下文」或「常驻记忆」里出现过的轮次不再注入 */
+  function dedupeRecall(list, ctxMsgs, s) {
+    if (!list || !list.length) return [];
+    var ctxTexts = [];
+    for (var i = 0; i < ctxMsgs.length; i++) {
+      var t = recallNorm(paramText(ctxMsgs[i]));
+      if (t) ctxTexts.push(t);
+    }
+    var memTexts = [];
+    for (var j = 0; j < s.items.length; j++) {
+      var it = s.items[j];
+      if (!it || !it.enabled || it.kind === 'summary') continue;
+      var mt = recallNorm(it.text);
+      if (mt) memTexts.push(mt);
+    }
+    // 记忆里可能换了个说法，再按 bigram 重合度兜一层
+    var memTokens = [];
+    for (var x = 0; x < memTexts.length; x++) memTokens.push(recallTokens(memTexts[x]));
+
+    var coveredByMemory = function (text) {
+      var toks = recallTokens(text);
+      if (!toks.length) return false;
+      var uniq = {};
+      for (var i2 = 0; i2 < toks.length; i2++) uniq[toks[i2]] = 1;
+      var keys = Object.keys(uniq);
+      if (!keys.length) return false;
+      for (var m2 = 0; m2 < memTokens.length; m2++) {
+        var set = {};
+        var list2 = memTokens[m2];
+        for (var j2 = 0; j2 < list2.length; j2++) set[list2[j2]] = 1;
+        var hit = 0;
+        for (var k2 = 0; k2 < keys.length; k2++) if (set[keys[k2]]) hit += 1;
+        if (hit / keys.length >= 0.6) return true;
+      }
+      return false;
+    };
+
+    var out = [];
+    for (var k = 0; k < list.length; k++) {
+      var r = list[k];
+      var u = recallNorm(r.user);
+      if (!u || u.length < 6) continue;
+      if (containsAny(ctxTexts, u)) continue;
+      if (containsAny(memTexts, u)) continue;
+      if (coveredByMemory(u)) continue;
+      out.push(r);
+    }
+    return out;
+  }
+
   function recallBlock(list) {
     if (!list || !list.length) return '';
     var lines = ['【相关回忆】（从你过去的聊天里检索到的片段，仅供参考）'];
@@ -638,7 +718,8 @@
             break;
           }
         }
-        api.lastRecall = s.recallEnabled && lastUser ? recallFor(lastUser, s.recallTopK) : [];
+        var pool = s.recallEnabled && lastUser ? recallFor(lastUser, Math.max(6, s.recallTopK * 3)) : [];
+        api.lastRecall = s.recallEnabled ? dedupeRecall(pool, out, s).slice(0, s.recallTopK) : [];
       } catch (e) {
         api.lastRecall = [];
       }
