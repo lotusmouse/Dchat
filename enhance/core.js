@@ -66,37 +66,6 @@
   }
 
 
-  /* ---- 临时诊断：?bubble=1 显示气泡的真实计算宽度 ---- */
-  function bubbleDebug() {
-    try {
-      if (String(location.search || '').indexOf('bubble=1') < 0) return;
-      var box = document.createElement('div');
-      box.id = 'dshx-bubble-debug';
-      box.style.cssText =
-        'position:fixed;left:8px;right:8px;bottom:8px;z-index:2147483647;background:#111;color:#0f0;' +
-        'font:12px/1.5 ui-monospace,monospace;padding:10px;border-radius:10px;white-space:pre-wrap;max-height:50vh;overflow:auto';
-      var lines = ['innerWidth=' + window.innerWidth];
-      var els = document.querySelectorAll('[data-dshx-bubble]');
-      lines.push('bubbles=' + els.length);
-      for (var i = 0; i < els.length && i < 3; i++) {
-        var el = els[i];
-        var cs = getComputedStyle(el);
-        lines.push(
-          '[' + el.getAttribute('data-dshx-bubble') + '] w=' + el.offsetWidth +
-          ' scrollW=' + el.scrollWidth +
-          ' maxW=' + cs.maxWidth +
-          ' font=' + cs.fontSize +
-          ' pad=' + cs.paddingLeft + '/' + cs.paddingRight +
-          ' ws=' + cs.whiteSpace
-        );
-      }
-      var tail = document.createElement('div');
-      tail.textContent = lines.join('\n');
-      box.appendChild(tail);
-      document.body.appendChild(box);
-    } catch (e) {}
-  }
-
   /* ---------------- 外观：聊天背景图 / 气泡颜色 ---------------- */
 
   var BG_KEY = 'dshx:chat-bg';
@@ -1334,9 +1303,6 @@
         dropOldSummaries();
       } catch (e) {}
       setTimeout(function () {
-        try {
-          bubbleDebug();
-        } catch (e) {}
         try {
           refreshRecall(true).catch(function () {});
         } catch (e) {}
