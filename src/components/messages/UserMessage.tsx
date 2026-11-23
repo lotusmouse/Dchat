@@ -15,6 +15,8 @@ import {
   type SelectMessageVersion,
 } from './BranchSwitcher.js'
 import { MessageFile } from './MessageFile.js'
+import { ChatAvatar } from './ChatAvatar.js'
+import { useEnhanceSetting } from './useEnhanceSetting.js'
 import { CopyButton } from './CopyButton.js'
 import styles from './UserMessage.module.css'
 
@@ -43,7 +45,16 @@ export const UserMessage = memo(function UserMessage({
   const [draft, setDraft] = useState(message.content)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const isMobile = useIsMobile()
+  const splitBubbles = useEnhanceSetting('bubbleSplit')
+  const showAvatars = useEnhanceSetting('showAvatars')
   const canSend = !busy && (draft.trim() !== '' || message.files.length > 0)
+  const bubbleParts =
+    splitBubbles && message.content
+      ? message.content
+          .split(/\r?\n/)
+          .map((line) => line.trim())
+          .filter((line) => line.length > 0)
+      : []
 
   useLayoutEffect(() => {
     const textarea = textareaRef.current
@@ -112,7 +123,24 @@ export const UserMessage = memo(function UserMessage({
         </div>
       ) : (
         <>
-          {message.content ? <div className={styles.bubble}>{message.content}</div> : null}
+          {bubbleParts.length > 1 ? (
+            <div className={styles.bubbleList}>
+              {bubbleParts.map((part, index) => (
+                <div
+                  key={index}
+                  className={clsx(styles.bubbleRow, showAvatars && styles.withAvatar)}
+                >
+                  {showAvatars ? <ChatAvatar role="user" /> : null}
+                  <div className={styles.bubble}>{part}</div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className={clsx(styles.bubbleRow, showAvatars && styles.withAvatar)}>
+              {showAvatars ? <ChatAvatar role="user" /> : null}
+              {message.content ? <div className={styles.bubble}>{message.content}</div> : null}
+            </div>
+          )}
           <div className={styles.bottom}>
             <div className={clsx(styles.actions, isLast && styles.alwaysShow)}>
               {message.content ? <CopyButton text={message.content} /> : null}

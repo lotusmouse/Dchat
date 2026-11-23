@@ -102,3 +102,24 @@
   gap: 8px;
   margin: 6px 10px 10px;
 }
+
+/* 分气泡 / 头像（增强层） */
+.bubbleList {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  max-width: 100%;
+}
+
+.bubbleRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 8px;
+  max-width: 100%;
+}
+
+.withAvatar .bubble {
+  max-width: calc(100% - 46px);
+}

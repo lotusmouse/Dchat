@@ -20,6 +20,10 @@ export type EnhancementSettings = {
   recallEnabled: boolean
   /** 每次最多召回几轮（1-3） */
   recallTopK: number
+  /** 按换行拆成多个气泡 */
+  bubbleSplit: boolean
+  /** 气泡旁显示头像 */
+  showAvatars: boolean
   autoCompress: boolean
   compressedHashes: string[]
   compressAt: number

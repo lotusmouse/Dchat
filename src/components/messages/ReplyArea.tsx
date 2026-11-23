@@ -30,6 +30,8 @@ import {
 } from '../../services/chat/view.js'
 import { Tooltip } from '../base/Tooltip.js'
 import { Markdown } from '../markdown/Markdown.js'
+import { ChatAvatar } from './ChatAvatar.js'
+import { useEnhanceSetting } from './useEnhanceSetting.js'
 import { SiteThumbnails } from '../search/SiteLogo.js'
 import { toggleSearchPanel, useSearchPanel } from '../search/searchPanelState.js'
 import styles from './ReplyArea.module.css'
@@ -122,6 +124,8 @@ const StepItem = ({
   streaming: boolean
   isLast: boolean
 }) => {
+  const splitBubbles = useEnhanceSetting('bubbleSplit')
+  const showAvatars = useEnhanceSetting('showAvatars')
   switch (step.type) {
     case 'thinking': {
       const lastBlock = step.blocks.at(-1)
@@ -138,18 +142,51 @@ const StepItem = ({
         </ContentItem>
       )
     }
-    case 'text':
+    case 'text': {
+      const lines = splitBubbles
+        ? step.markdown
+            .split(/\r?\n/)
+            .map((line) => line.trim())
+            .filter((line) => line.length > 0)
+        : []
+      if (lines.length > 1) {
+        return (
+          <div className={styles.bubbleStack}>
+            {lines.map((line, index) => (
+              <div
+                key={index}
+                className={clsx(styles.assistantRow, showAvatars && styles.withAvatar)}
+              >
+                {showAvatars ? <ChatAvatar role="assistant" /> : null}
+                <div className={clsx(styles.assistantBubble, (splitBubbles || showAvatars) && styles.bubbleOn)}>
+                  <Markdown
+                    content={line}
+                    loading={streaming && isLast && index === lines.length - 1}
+                    cacheKey={`${message.id}-${step.key}-${index}`}
+                    disableLink={false}
+                    sources={sources}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        )
+      }
       return (
-        <ContentItem isLast={isLast} active={false}>
-          <Markdown
-            content={step.markdown}
-            loading={streaming && isLast}
-            cacheKey={`${message.id}-${step.key}`}
-            disableLink={false}
-            sources={sources}
-          />
-        </ContentItem>
+        <div className={clsx(styles.assistantRow, showAvatars && styles.withAvatar)}>
+          {showAvatars ? <ChatAvatar role="assistant" /> : null}
+          <div className={clsx(styles.assistantBubble, (splitBubbles || showAvatars) && styles.bubbleOn)}>
+            <Markdown
+              content={step.markdown}
+              loading={streaming && isLast}
+              cacheKey={`${message.id}-${step.key}`}
+              disableLink={false}
+              sources={sources}
+            />
+          </div>
+        </div>
       )
+    }
     case 'search':
       return <SearchRow step={step} message={message} streaming={streaming} isLast={isLast} />
     case 'open':

@@ -162,7 +162,7 @@ const EnhancementContent = ({ core }: { core: Core }) => {
       reader.onload = () => {
         try {
           const data = JSON.parse(String(reader.result)) as Partial<Settings>
-          const allowed: (keyof Settings)[] = ['system', 'systemEnabled', 'memoryEnabled', 'items', 'recallEnabled', 'recallTopK', 'autoCompress', 'compressedHashes', 'compressAt', 'model', 'modelOff', 'safety', 'showUsage']
+          const allowed: (keyof Settings)[] = ['system', 'systemEnabled', 'memoryEnabled', 'items', 'recallEnabled', 'recallTopK', 'bubbleSplit', 'showAvatars', 'autoCompress', 'compressedHashes', 'compressAt', 'model', 'modelOff', 'safety', 'showUsage']
           const patch: Partial<Settings> = {}
           for (const key of allowed) {
             if (Object.hasOwn(data, key)) {
@@ -369,6 +369,8 @@ const EnhancementContent = ({ core }: { core: Core }) => {
       </Section>
 
       <Section title="外观增强">
+        <Row label="换行分气泡" description="消息里的每个换行都拆成单独的气泡；空行会被忽略" action={<Toggle label="换行分气泡" checked={settings.bubbleSplit} onChange={() => update({ bubbleSplit: !settings.bubbleSplit })} />} />
+        <Row label="气泡头像" description="在气泡旁边显示头像，用户和助手都有" action={<Toggle label="气泡头像" checked={settings.showAvatars} onChange={() => update({ showAvatars: !settings.showAvatars })} />} />
         <div className={styles.enhanceAppIconPreview}>
           {appIcon ? <img src={appIcon} alt="当前欢迎页图标" /> : <span>D</span>}
         </div>

@@ -26,6 +26,8 @@
     items: [],
     recallEnabled: true,
     recallTopK: 3,
+    bubbleSplit: false,
+    showAvatars: false,
     autoCompress: true,
     compressedHashes: [],
     compressAt: 100000,
@@ -319,6 +321,8 @@
     s.memoryEnabled = s.memoryEnabled !== false;
     s.recallEnabled = s.recallEnabled !== false;
     s.recallTopK = Math.min(3, Math.max(1, Number(s.recallTopK) || 3));
+    s.bubbleSplit = s.bubbleSplit === true;
+    s.showAvatars = s.showAvatars === true;
     s.autoCompress = s.autoCompress !== false;
     s.showUsage = s.showUsage !== false;
     s.items = Array.isArray(s.items) ? s.items.map(normalizeItem).filter(Boolean) : [];
@@ -334,6 +338,9 @@
       for (var k in patch) if (Object.prototype.hasOwnProperty.call(patch, k)) s[k] = patch[k];
     }
     safeSet(STORE, JSON.stringify(s));
+    try {
+      window.dispatchEvent(new CustomEvent('dshx:settings'));
+    } catch (e) {}
     return s;
   }
 

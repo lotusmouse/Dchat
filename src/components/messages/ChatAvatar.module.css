@@ -1,0 +1,51 @@
+.avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex: 0 0 auto;
+  background-color: var(--dsw-alias-bg-layer-2);
+  border: 1px solid var(--dsw-alias-border-l2);
+}
+
+.user {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-secondary);
+  user-select: none;
+}
+
+/* 用户气泡：头像在右侧 */
+.userRow {
+  flex-direction: row-reverse;
+}
+
+/* 助手气泡 */
+.assistantBubble {
+  max-width: 100%;
+  padding: 10px 16px;
+  border-radius: 18px;
+  background-color: var(--dsw-specific-bubble);
+  color: var(--dsw-alias-label-primary);
+}
+
+.bubbleRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.bubbleStack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.bubbleStackAssistant {
+  align-items: flex-start;
+}
