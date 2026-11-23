@@ -155,10 +155,12 @@
 }
 
 .assistantBubble {
+  flex: 0 0 auto;
   min-width: 0;
 }
 
 .bubbleOn {
+  flex: 0 0 auto;
   width: max-content;
   /* 默认不加底色和内边距：外观完全交给自定义 CSS（可用 [data-dshx-bubble="ai"] 覆盖） */
   background: transparent;
