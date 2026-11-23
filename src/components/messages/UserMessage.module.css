@@ -109,7 +109,7 @@
   flex-direction: column;
   align-items: flex-end;
   gap: 6px;
-  max-width: 100%;
+  width: 100%;
 }
 
 .bubbleRow {
@@ -119,9 +119,10 @@
   align-items: flex-start;
   justify-content: flex-start;
   gap: 8px;
-  max-width: 100%;
+  width: 100%;
 }
 
 .withAvatar .bubble {
-  max-width: min(66vw, calc(100% - 54px));
+  /* 父级已是整行，直接用绝对宽度上限，避免百分比在收缩容器里失真 */
+  max-width: 66vw;
 }
