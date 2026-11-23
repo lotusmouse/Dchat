@@ -17,6 +17,7 @@ import {
 import { MessageFile } from './MessageFile.js'
 import { ChatAvatar } from './ChatAvatar.js'
 import { useEnhanceSetting } from './useEnhanceSetting.js'
+import { splitIntoBubbles } from './bubbles.js'
 import { CopyButton } from './CopyButton.js'
 import styles from './UserMessage.module.css'
 
@@ -49,12 +50,7 @@ export const UserMessage = memo(function UserMessage({
   const showAvatars = useEnhanceSetting('showAvatars')
   const canSend = !busy && (draft.trim() !== '' || message.files.length > 0)
   const bubbleParts =
-    splitBubbles && message.content
-      ? message.content
-          .split(/\r?\n/)
-          .map((line) => line.trim())
-          .filter((line) => line.length > 0)
-      : []
+    splitBubbles && message.content ? splitIntoBubbles(message.content) : []
 
   useLayoutEffect(() => {
     const textarea = textareaRef.current

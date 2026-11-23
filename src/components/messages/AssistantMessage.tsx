@@ -19,6 +19,7 @@ import { ReplyArea } from './ReplyArea.js'
 import { useReplyView } from './useReplyView.js'
 import { ChatAvatar } from './ChatAvatar.js'
 import { useEnhanceSetting } from './useEnhanceSetting.js'
+import { splitIntoBubbles } from './bubbles.js'
 import {
   BranchSwitcher,
   type MessageVersions,
@@ -58,13 +59,7 @@ export const AssistantMessage = memo(function AssistantMessage({
     .filter(Boolean)
     .join('\n\n')
   const copyText = responseText || notice?.text
-  const answerLines =
-    splitBubbles && answer
-      ? answer.markdown
-          .split(/\r?\n/)
-          .map((line) => line.trim())
-          .filter((line) => line.length > 0)
-      : []
+  const answerLines = splitBubbles && answer ? splitIntoBubbles(answer.markdown) : []
   const waiting = streaming && view.steps.length === 0 && !view.answer && !message.thinking
   const summaryEntry = `${message.id}-summary`
   return (

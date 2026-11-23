@@ -27,3 +27,12 @@ export const readAvatarSrc = (): string => {
   }
   return 'icons/icon-192.png'
 }
+
+/** 用户头像（可选）；没设置返回空字符串，界面上退化成“我” */
+export const readUserAvatarSrc = (): string => {
+  try {
+    return localStorage.getItem('dshx:user-avatar') || ''
+  } catch {
+    return ''
+  }
+}

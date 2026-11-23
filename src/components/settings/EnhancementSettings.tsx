@@ -90,6 +90,7 @@ const EnhancementContent = ({ core }: { core: Core }) => {
   const [model, setModel] = useState(settings.model)
   const [models, setModels] = useState<string[]>([])
   const [newMemory, setNewMemory] = useState('')
+  const [avatarTick, setAvatarTick] = useState(0)
   const [busy, setBusy] = useState(false)
   const [background, setBackground] = useState(core.getChatBg())
   const [bubble, setBubble] = useState(core.getBubbleColor())
@@ -211,6 +212,61 @@ const EnhancementContent = ({ core }: { core: Core }) => {
       reader.readAsDataURL(file)
     }
     input.click()
+  }
+
+  /** 上传气泡头像：role 决定存到哪个 key（助手 dshx:avatar / 用户 dshx:user-avatar） */
+  const pickChatAvatar = (role: 'assistant' | 'user') => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = 'image/*'
+    input.onchange = () => {
+      const file = input.files?.[0]
+      if (!file) {
+        return
+      }
+      const reader = new FileReader()
+      reader.onload = () => {
+        const image = new Image()
+        image.onload = () => {
+          const scale = Math.min(1, 256 / Math.max(image.width, image.height))
+          const canvas = document.createElement('canvas')
+          canvas.width = Math.max(1, Math.round(image.width * scale))
+          canvas.height = Math.max(1, Math.round(image.height * scale))
+          const context = canvas.getContext('2d')
+          if (!context) {
+            showToast('图片处理失败，请换一张')
+            return
+          }
+          context.drawImage(image, 0, 0, canvas.width, canvas.height)
+          try {
+            localStorage.setItem(
+              role === 'user' ? 'dshx:user-avatar' : 'dshx:avatar',
+              canvas.toDataURL('image/jpeg', 0.85)
+            )
+            window.dispatchEvent(new CustomEvent('dshx:avatar'))
+            setAvatarTick((value) => value + 1)
+            showToast(role === 'user' ? '我的头像已更新' : 'AI 头像已更新')
+          } catch {
+            showToast('保存失败，图片可能太大')
+          }
+        }
+        image.onerror = () => showToast('图片读不出来')
+        image.src = String(reader.result)
+      }
+      reader.readAsDataURL(file)
+    }
+    input.click()
+  }
+
+  const resetChatAvatar = (role: 'assistant' | 'user') => {
+    try {
+      localStorage.removeItem(role === 'user' ? 'dshx:user-avatar' : 'dshx:avatar')
+    } catch {
+      // ignore
+    }
+    window.dispatchEvent(new CustomEvent('dshx:avatar'))
+    setAvatarTick((value) => value + 1)
+    showToast('已恢复默认头像')
   }
 
   const pickAppIcon = () => {
@@ -371,6 +427,26 @@ const EnhancementContent = ({ core }: { core: Core }) => {
       <Section title="外观增强">
         <Row label="换行分气泡" description="消息里的每个换行都拆成单独的气泡；空行会被忽略" action={<Toggle label="换行分气泡" checked={settings.bubbleSplit} onChange={() => update({ bubbleSplit: !settings.bubbleSplit })} />} />
         <Row label="气泡头像" description="在气泡旁边显示头像，用户和助手都有" action={<Toggle label="气泡头像" checked={settings.showAvatars} onChange={() => update({ showAvatars: !settings.showAvatars })} />} />
+        <Row
+          label="AI 头像"
+          description="气泡和通话页共用，保存在本机"
+          action={
+            <div className={styles.enhanceActions}>
+              <Button variant="outlined" size="m" onClick={() => pickChatAvatar('assistant')}>上传</Button>
+              <Button variant="outlined" size="m" onClick={() => resetChatAvatar('assistant')}>默认</Button>
+            </div>
+          }
+        />
+        <Row
+          label="我的头像"
+          description={avatarTick >= 0 && typeof localStorage !== 'undefined' && localStorage.getItem('dshx:user-avatar') ? '已自定义' : '默认显示“我”，可上传图片'}
+          action={
+            <div className={styles.enhanceActions}>
+              <Button variant="outlined" size="m" onClick={() => pickChatAvatar('user')}>上传</Button>
+              <Button variant="outlined" size="m" onClick={() => resetChatAvatar('user')}>默认</Button>
+            </div>
+          }
+        />
         <div className={styles.enhanceAppIconPreview}>
           {appIcon ? <img src={appIcon} alt="当前欢迎页图标" /> : <span>D</span>}
         </div>

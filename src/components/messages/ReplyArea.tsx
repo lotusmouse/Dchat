@@ -32,6 +32,7 @@ import { Tooltip } from '../base/Tooltip.js'
 import { Markdown } from '../markdown/Markdown.js'
 import { ChatAvatar } from './ChatAvatar.js'
 import { useEnhanceSetting } from './useEnhanceSetting.js'
+import { splitIntoBubbles } from './bubbles.js'
 import { SiteThumbnails } from '../search/SiteLogo.js'
 import { toggleSearchPanel, useSearchPanel } from '../search/searchPanelState.js'
 import styles from './ReplyArea.module.css'
@@ -143,12 +144,7 @@ const StepItem = ({
       )
     }
     case 'text': {
-      const lines = splitBubbles
-        ? step.markdown
-            .split(/\r?\n/)
-            .map((line) => line.trim())
-            .filter((line) => line.length > 0)
-        : []
+      const lines = splitBubbles ? splitIntoBubbles(step.markdown) : []
       if (lines.length > 1) {
         return (
           <div className={styles.bubbleStack}>
