@@ -17,6 +17,8 @@ import { ReadAloudButton } from './ReadAloudButton.js'
 import { CopyButton } from './CopyButton.js'
 import { ReplyArea } from './ReplyArea.js'
 import { useReplyView } from './useReplyView.js'
+import { ChatAvatar } from './ChatAvatar.js'
+import { useEnhanceSetting } from './useEnhanceSetting.js'
 import {
   BranchSwitcher,
   type MessageVersions,
@@ -44,6 +46,8 @@ export const AssistantMessage = memo(function AssistantMessage({
   onSelectVersion: SelectMessageVersion
 }) {
   const t = useTranslate()
+  const splitBubbles = useEnhanceSetting('bubbleSplit')
+  const showAvatars = useEnhanceSetting('showAvatars')
   const view = useReplyView(message, streaming)
   const panelEntry = useSearchPanel((state) => state.entry)
   const notice = streaming ? null : describeReply(message)
@@ -54,6 +58,13 @@ export const AssistantMessage = memo(function AssistantMessage({
     .filter(Boolean)
     .join('\n\n')
   const copyText = responseText || notice?.text
+  const answerLines =
+    splitBubbles && answer
+      ? answer.markdown
+          .split(/\r?\n/)
+          .map((line) => line.trim())
+          .filter((line) => line.length > 0)
+      : []
   const waiting = streaming && view.steps.length === 0 && !view.answer && !message.thinking
   const summaryEntry = `${message.id}-summary`
   return (
@@ -66,15 +77,45 @@ export const AssistantMessage = memo(function AssistantMessage({
           hasResponse={!!responseText}
         />
       )}
-      {answer ? (
-        <Markdown
-          className="ds-assistant-message-main-content"
-          content={answer.markdown}
-          loading={streaming}
-          cacheKey={message.id}
-          disableLink={false}
-          sources={view.sources}
-        />
+      {answer && answerLines.length > 1 ? (
+        <div className={styles.bubbleStack}>
+          {answerLines.map((line, index) => (
+            <div
+              key={index}
+              className={clsx(styles.assistantRow, showAvatars && styles.withAvatar)}
+            >
+              {showAvatars ? <ChatAvatar role="assistant" /> : null}
+              <div className={clsx(styles.assistantBubble, styles.bubbleOn)}>
+                <Markdown
+                  content={line}
+                  loading={streaming && index === answerLines.length - 1}
+                  cacheKey={`${message.id}-line-${index}`}
+                  disableLink={false}
+                  sources={view.sources}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : answer ? (
+        <div className={clsx(styles.assistantRow, showAvatars && styles.withAvatar)}>
+          {showAvatars ? <ChatAvatar role="assistant" /> : null}
+          <div
+            className={clsx(
+              styles.assistantBubble,
+              (splitBubbles || showAvatars) && styles.bubbleOn
+            )}
+          >
+            <Markdown
+              className="ds-assistant-message-main-content"
+              content={answer.markdown}
+              loading={streaming}
+              cacheKey={message.id}
+              disableLink={false}
+              sources={view.sources}
+            />
+          </div>
+        </div>
       ) : null}
       {waiting ? (
         <div className={styles.waiting}>

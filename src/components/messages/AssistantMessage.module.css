@@ -137,3 +137,31 @@
     --search-row-site-logo-color: var(--dsw-alias-interactive-bg-hover);
   }
 }
+
+
+/* 分气泡 / 头像（增强层） */
+.bubbleStack {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.assistantRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+}
+
+.assistantBubble {
+  min-width: 0;
+}
+
+.bubbleOn {
+  padding: 10px 16px;
+  border-radius: 18px;
+  background-color: var(--dsw-alias-bg-layer-2, rgba(127, 127, 127, 0.12));
+  box-sizing: border-box;
+  max-width: 100%;
+}
