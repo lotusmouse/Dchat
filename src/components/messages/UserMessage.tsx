@@ -49,6 +49,13 @@ export const UserMessage = memo(function UserMessage({
   const splitBubbles = useEnhanceSetting('bubbleSplit')
   const showAvatars = useEnhanceSetting('showAvatars')
   const canSend = !busy && (draft.trim() !== '' || message.files.length > 0)
+  // 不分气泡时，把消息里的硬换行合并成空格：让文字自然流到气泡边缘再折行
+  const flowText = splitBubbles
+    ? message.content
+    : String(message.content || '')
+        .replace(/\s*\r?\n+\s*/g, ' ')
+        .trim()
+
   const bubbleParts =
     splitBubbles && message.content ? splitIntoBubbles(message.content) : []
 
@@ -134,7 +141,7 @@ export const UserMessage = memo(function UserMessage({
           ) : (
             <div className={clsx(styles.bubbleRow, showAvatars && styles.withAvatar)}>
               {showAvatars ? <ChatAvatar role="user" /> : null}
-              {message.content ? <div className={styles.bubble} data-dshx-bubble="user">{message.content}</div> : null}
+              {flowText ? <div className={styles.bubble} data-dshx-bubble="user">{flowText}</div> : null}
             </div>
           )}
           <div className={styles.bottom}>
