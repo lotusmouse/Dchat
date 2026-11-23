@@ -486,6 +486,7 @@ const EnhancementContent = ({ core }: { core: Core }) => {
       </Section>
 
       <Section title="增强设置备份">
+        <div className={styles.description}>当前站点版本：{document.querySelector('meta[name="application-version"]')?.getAttribute('content') ?? '未知'}</div>
         <div className={styles.description}>仅包含提示词、记忆、压缩状态和模型设置，不包含 API Key 或聊天记录。</div>
         <div className={styles.enhanceActions}>
           <Button variant="outlined" size="m" onClick={() => downloadJson(core.getSettings(), 'deepseek-enhance-settings.json')}>导出增强设置</Button>
