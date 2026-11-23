@@ -80,7 +80,7 @@ export const AssistantMessage = memo(function AssistantMessage({
               className={clsx(styles.assistantRow, showAvatars && styles.withAvatar)}
             >
               {showAvatars ? <ChatAvatar role="assistant" /> : null}
-              <div className={clsx(styles.assistantBubble, styles.bubbleOn)}>
+              <div className={clsx(styles.assistantBubble, styles.bubbleOn)} data-dshx-bubble="ai">
                 <Markdown
                   content={line}
                   loading={streaming && index === answerLines.length - 1}
@@ -96,10 +96,8 @@ export const AssistantMessage = memo(function AssistantMessage({
         <div className={clsx(styles.assistantRow, showAvatars && styles.withAvatar)}>
           {showAvatars ? <ChatAvatar role="assistant" /> : null}
           <div
-            className={clsx(
-              styles.assistantBubble,
-              (splitBubbles || showAvatars) && styles.bubbleOn
-            )}
+            className={clsx(styles.assistantBubble, (splitBubbles || showAvatars) && styles.bubbleOn)}
+            data-dshx-bubble="ai"
           >
             <Markdown
               className="ds-assistant-message-main-content"

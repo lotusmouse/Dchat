@@ -335,11 +335,8 @@
 }
 
 .bubbleOn {
-  padding: 10px 16px;
-  border-radius: 18px;
-  /* 不要用 bg-layer-2（那是接近纯白的不透明色），在背景图/毛玻璃上会显出一块白斑 */
-  background-color: rgba(127, 127, 127, 0.12);
-  background-color: color-mix(in srgb, currentColor 8%, transparent);
+  background: transparent;
+  padding: 0;
   box-sizing: border-box;
-  max-width: 66vw;
+  max-width: 74vw;
 }

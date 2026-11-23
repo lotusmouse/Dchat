@@ -127,14 +127,14 @@ export const UserMessage = memo(function UserMessage({
                   className={clsx(styles.bubbleRow, showAvatars && styles.withAvatar)}
                 >
                   {showAvatars ? <ChatAvatar role="user" /> : null}
-                  <div className={styles.bubble}>{part}</div>
+                  <div className={styles.bubble} data-dshx-bubble="user">{part}</div>
                 </div>
               ))}
             </div>
           ) : (
             <div className={clsx(styles.bubbleRow, showAvatars && styles.withAvatar)}>
               {showAvatars ? <ChatAvatar role="user" /> : null}
-              {message.content ? <div className={styles.bubble}>{message.content}</div> : null}
+              {message.content ? <div className={styles.bubble} data-dshx-bubble="user">{message.content}</div> : null}
             </div>
           )}
           <div className={styles.bottom}>

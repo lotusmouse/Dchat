@@ -426,7 +426,7 @@ const EnhancementContent = ({ core }: { core: Core }) => {
 
       <Section title="外观增强">
         <Row label="换行分气泡" description="消息里的每个换行都拆成单独的气泡；空行会被忽略" action={<Toggle label="换行分气泡" checked={settings.bubbleSplit} onChange={() => update({ bubbleSplit: !settings.bubbleSplit })} />} />
-        <Row label="气泡头像" description="在气泡旁边显示头像，用户和助手都有" action={<Toggle label="气泡头像" checked={settings.showAvatars} onChange={() => update({ showAvatars: !settings.showAvatars })} />} />
+        <Row label="气泡头像" description="在气泡旁边显示头像，用户和助手都有；气泡外观交给自定义 CSS" action={<Toggle label="气泡头像" checked={settings.showAvatars} onChange={() => update({ showAvatars: !settings.showAvatars })} />} />
         <Row
           label="AI 头像"
           description="气泡和通话页共用，保存在本机"
