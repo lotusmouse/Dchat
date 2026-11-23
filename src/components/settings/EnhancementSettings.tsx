@@ -163,7 +163,7 @@ const EnhancementContent = ({ core }: { core: Core }) => {
       reader.onload = () => {
         try {
           const data = JSON.parse(String(reader.result)) as Partial<Settings>
-          const allowed: (keyof Settings)[] = ['system', 'systemEnabled', 'memoryEnabled', 'items', 'recallEnabled', 'recallTopK', 'bubbleSplit', 'showAvatars', 'autoCompress', 'compressedHashes', 'compressAt', 'model', 'modelOff', 'safety', 'showUsage']
+          const allowed: (keyof Settings)[] = ['system', 'systemEnabled', 'memoryEnabled', 'items', 'recallEnabled', 'recallTopK', 'bubbleSplit', 'showAvatars', 'glassBubble', 'autoCompress', 'compressedHashes', 'compressAt', 'model', 'modelOff', 'safety', 'showUsage']
           const patch: Partial<Settings> = {}
           for (const key of allowed) {
             if (Object.hasOwn(data, key)) {
@@ -427,6 +427,7 @@ const EnhancementContent = ({ core }: { core: Core }) => {
       <Section title="外观增强">
         <Row label="换行分气泡" description="消息里的每个换行都拆成单独的气泡；空行会被忽略" action={<Toggle label="换行分气泡" checked={settings.bubbleSplit} onChange={() => update({ bubbleSplit: !settings.bubbleSplit })} />} />
         <Row label="气泡头像" description="在气泡旁边显示头像，用户和助手都有；气泡外观交给自定义 CSS" action={<Toggle label="气泡头像" checked={settings.showAvatars} onChange={() => update({ showAvatars: !settings.showAvatars })} />} />
+        <Row label="毛玻璃尖角气泡" description="两侧都用半透明磨砂气泡，带一个小尖角；和自定义 CSS 二选一" action={<Toggle label="毛玻璃尖角气泡" checked={settings.glassBubble} onChange={() => update({ glassBubble: !settings.glassBubble })} />} />
         <Row
           label="AI 头像"
           description="气泡和通话页共用，保存在本机"

@@ -24,6 +24,8 @@ export type EnhancementSettings = {
   bubbleSplit: boolean
   /** 气泡旁显示头像 */
   showAvatars: boolean
+  /** 毛玻璃尖角气泡 */
+  glassBubble: boolean
   autoCompress: boolean
   compressedHashes: string[]
   compressAt: number

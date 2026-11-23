@@ -27,6 +27,7 @@
     recallEnabled: true,
     recallTopK: 3,
     bubbleSplit: false,
+    glassBubble: false,
     showAvatars: false,
     autoCompress: true,
     compressedHashes: [],
@@ -94,6 +95,14 @@
     try { localStorage.removeItem(key); } catch (e) {}
   }
 
+  function s_glass() {
+    try {
+      return getSettings().glassBubble === true;
+    } catch (e) {
+      return false;
+    }
+  }
+
   function applyTheme() {
     var root = document.documentElement;
     if (!root) return;
@@ -124,6 +133,9 @@
       root.style.removeProperty('--dshx-bubble');
       root.removeAttribute('data-dshx-bubble');
     }
+
+    if (s_glass()) root.setAttribute('data-dshx-glass-bubble', '1');
+    else root.removeAttribute('data-dshx-glass-bubble');
 
     try {
       applyCustomCss();
@@ -322,6 +334,7 @@
     s.recallEnabled = s.recallEnabled !== false;
     s.recallTopK = Math.min(3, Math.max(1, Number(s.recallTopK) || 3));
     s.bubbleSplit = s.bubbleSplit === true;
+    s.glassBubble = s.glassBubble === true;
     s.showAvatars = s.showAvatars === true;
     s.autoCompress = s.autoCompress !== false;
     s.showUsage = s.showUsage !== false;
