@@ -30,7 +30,7 @@
 .bubble {
   flex: 0 0 auto;
   width: max-content;
-  max-width: calc(100% - 88px);
+  max-width: min(66vw, calc(100% - 88px));
   box-sizing: border-box;
   padding: 10px 16px;
   border-radius: 22px;
@@ -127,6 +127,5 @@
 .withAvatar .bubble {
   flex: 0 0 auto;
   width: max-content;
-  /* 行宽减去头像和间距；不再用 vw 上限，避免字号偏大时提前折行 */
-  max-width: calc(100% - 54px);
+  max-width: 66vw;
 }
