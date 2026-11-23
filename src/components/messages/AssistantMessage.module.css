@@ -165,3 +165,32 @@
   box-sizing: border-box;
   max-width: 74vw;
 }
+
+
+/* 气泡里不要再叠加官方正文容器的内边距/外边距，否则上下会多出一截空白 */
+.bubbleOn :global(.ds-assistant-message-main-content) {
+  padding-bottom: 0;
+  margin: 0;
+}
+
+.bubbleOn :global(.ds-markdown) {
+  margin: 0;
+}
+
+.bubbleOn :global(.ds-markdown) > :first-child {
+  margin-top: 0;
+}
+
+.bubbleOn :global(.ds-markdown) > :last-child {
+  margin-bottom: 0;
+}
+
+/* 头像比一行字高时，不要让整行被撑高，气泡按内容高度贴顶 */
+.assistantRow {
+  align-items: flex-start;
+}
+
+.assistantBubble {
+  margin: 0;
+  padding: 0;
+}
