@@ -82,6 +82,7 @@ export const AssistantMessage = memo(function AssistantMessage({
               {showAvatars ? <ChatAvatar role="assistant" /> : null}
               <div className={clsx(styles.assistantBubble, styles.bubbleOn)} data-dshx-bubble="ai">
                 <Markdown
+                  className="ds-assistant-message-main-content"
                   content={line}
                   loading={streaming && index === answerLines.length - 1}
                   cacheKey={`${message.id}-line-${index}`}
