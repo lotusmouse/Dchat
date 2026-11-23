@@ -265,3 +265,27 @@ html[data-ds-theme="dark"] #dshx-call-fab {
 #dshx-call[data-phase="thinking"] .dc-avatar {
   box-shadow: 0 0 0 6px rgba(160, 166, 176, 0.16), 0 10px 30px rgba(20, 30, 50, 0.1);
 }
+
+/* ---------- 聊天背景图 / 气泡颜色 ---------- */
+html[data-dshx-bg="1"] #root .main-_9fdf5 {
+  background-image: var(--dshx-chat-bg);
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+}
+
+/* 气泡颜色的兜底覆盖（变量定义在 body 上，直接改属性更稳） */
+html[data-dshx-bubble="1"] #root .bubble-_4cfe7 {
+  background-color: var(--dshx-bubble) !important;
+}
+
+/* 有背景图时，输入框容器底部那条白渐变会变成一片白，直接去掉 */
+html[data-dshx-bg="1"] #root .inputContainer-_5fa77 {
+  background: none !important;
+}
+
+/* 兜底：消息区底部那层也用透明，避免残留白边 */
+html[data-dshx-bg="1"] #root .bottom-_4cfe7,
+html[data-dshx-bg="1"] #root .bottom-e1faee {
+  background: none !important;
+}
