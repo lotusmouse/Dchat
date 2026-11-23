@@ -157,6 +157,7 @@
 .assistantBubble {
   flex: 0 0 auto;
   min-width: 0;
+  max-width: 100%;
 }
 
 .bubbleOn {
@@ -166,7 +167,7 @@
   background: transparent;
   padding: 0;
   box-sizing: border-box;
-  max-width: 74vw;
+  max-width: calc(100% - 46px);
 }
 
 
