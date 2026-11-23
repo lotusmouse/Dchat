@@ -163,5 +163,6 @@
   border-radius: 18px;
   background-color: var(--dsw-alias-bg-layer-2, rgba(127, 127, 127, 0.12));
   box-sizing: border-box;
-  max-width: 66vw;
+  width: 66vw;
+  max-width: 100%;
 }

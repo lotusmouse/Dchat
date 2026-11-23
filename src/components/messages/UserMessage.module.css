@@ -28,7 +28,8 @@
 }
 
 .bubble {
-  max-width: min(66vw, calc(100% - 88px));
+  width: 66vw;
+  max-width: calc(100% - 88px);
   box-sizing: border-box;
   padding: 10px 16px;
   border-radius: 22px;
@@ -123,5 +124,6 @@
 }
 
 .withAvatar .bubble {
-  max-width: min(66vw, calc(100% - 46px));
+  width: 66vw;
+  max-width: calc(100% - 46px);
 }
