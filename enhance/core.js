@@ -620,13 +620,15 @@
     };
 
     var out = [];
+    var seen = {};
     for (var k = 0; k < list.length; k++) {
       var r = list[k];
       var u = recallNorm(r.user);
-      if (!u || u.length < 6) continue;
+      if (!u || u.length < 6 || seen[u]) continue;
       if (containsAny(ctxTexts, u)) continue;
       if (containsAny(memTexts, u)) continue;
       if (coveredByMemory(u)) continue;
+      seen[u] = true;
       out.push(r);
     }
     return out;
@@ -788,6 +790,16 @@
         }
       }
       var snapshots = s.recallEnabled ? readRaw(RECALL_SNAPSHOTS) : {};
+      if (s.recallEnabled) {
+        // 先恢复历史轮次的召回快照，out 才是模型实际看到的完整上下文。
+        // 后续检索据此去重，已经召回过的内容不会在下一轮再次消耗 token。
+        for (var h = 0; h < recallSource.length; h++) {
+          if (h === lastUserIndex || !recallSource[h] || recallSource[h].role !== 'user') continue;
+          var historyRecall = unpackRecallSnapshot(snapshots[recallContextKey(recallSource, h)]);
+          var historyBlock = recallBlock(historyRecall.list, historyRecall.legacy);
+          if (historyBlock) out = withRecall(out, h, historyBlock);
+        }
+      }
       var lastRecallLegacy = false;
       api.lastRecall = [];
       try {
@@ -800,23 +812,17 @@
             lastRecallLegacy = saved.legacy;
           } else if (lastUser) {
             var pool = recallFor(lastUser, Math.max(6, s.recallTopK * 3));
-            api.lastRecall = dedupeRecall(pool, recallSource, s).slice(0, s.recallTopK);
+            api.lastRecall = dedupeRecall(pool, out, s).slice(0, s.recallTopK);
             saveRecallSnapshot(snapshots, snapshotKey, api.lastRecall);
           }
         }
       } catch (e) {
         api.lastRecall = [];
       }
-      if (s.recallEnabled) {
-        // 每轮召回保存在对应 user 的快照中。本轮变成历史后仍逐字不变，缓存前缀不会断开。
-        for (var r = 0; r < recallSource.length; r++) {
-          if (!recallSource[r] || recallSource[r].role !== 'user') continue;
-          var savedRecall = r === lastUserIndex
-            ? { list: api.lastRecall, legacy: lastRecallLegacy }
-            : unpackRecallSnapshot(snapshots[recallContextKey(recallSource, r)]);
-          var rec = recallBlock(savedRecall.list, savedRecall.legacy);
-          if (rec) out = withRecall(out, r, rec);
-        }
+      if (s.recallEnabled && lastUserIndex >= 0) {
+        // 本轮召回只追加一次；成为历史后仍逐字不变，缓存前缀不会断开。
+        var currentBlock = recallBlock(api.lastRecall, lastRecallLegacy);
+        if (currentBlock) out = withRecall(out, lastUserIndex, currentBlock);
       }
       var chars = 0;
       for (var k = 0; k < out.length; k++) chars += sizeOf(out[k]);
