@@ -1008,7 +1008,7 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
           latestReminder
         )
         let requestMessages = enhancementMessages(messages)
-        // 放在 messages 之后：ctx() 会顺便算出本轮召回，sys() 再把它塞进系统提示词
+        // ctx() 会把本轮召回放进最后一条 user，系统提示词和历史前缀保持稳定以命中缓存。
         const system = enhancementSystem(SYSTEM_PROMPT)
         const tools = serverTools(initial.search ?? false)
         // 客户端工具在同一轮对话内执行，拿到结果后继续请求，直到模型给出正常回复。

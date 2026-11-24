@@ -654,8 +654,8 @@
       var out;
       if (base.indexOf('{{memory}}') >= 0) out = base.replace(/\{\{memory\}\}/g, mem).trim();
       else out = !mem ? base : (base ? base + '\n\n' : '') + mem;
-      var rec = s.recallEnabled ? recallBlock(api.lastRecall) : '';
-      if (rec) out = (out ? out + '\n\n' : '') + rec;
+      // 召回内容放在本轮最后一条 user 消息，不能放进系统提示词：
+      // 系统提示词位于请求前缀，每轮变化会让全部历史上下文都无法命中缓存。
       return out || DEFAULT_SYSTEM;
     } catch (e) {
       return DEFAULT_SYSTEM;
@@ -694,6 +694,42 @@
     }
   }
 
+  var RECALL_SNAPSHOTS = 'dshx:recall-snapshots:v1';
+
+  function recallContextKey(msgs, index) {
+    var parts = [];
+    for (var i = 0; i <= index; i++) parts.push(hashOf(msgs[i]));
+    return hashOf({ role: 'recall', content: parts.join('.') });
+  }
+
+  function saveRecallSnapshot(snapshots, key, list) {
+    var clean = [];
+    for (var i = 0; i < list.length; i++) {
+      clean.push({ at: list[i].at || 0, user: list[i].user || '', answer: list[i].answer || '' });
+    }
+    snapshots[key] = clean;
+    var keys = Object.keys(snapshots);
+    // 只保留最近使用的快照，避免本地存储无限增长。
+    while (keys.length > 200) safeRemoveSnapshot(snapshots, keys.shift());
+    safeSet(RECALL_SNAPSHOTS, JSON.stringify(snapshots));
+  }
+
+  function safeRemoveSnapshot(snapshots, key) {
+    if (key) delete snapshots[key];
+  }
+
+  function withRecall(msgs, index, rec) {
+    var original = msgs[index];
+    var copy = {};
+    for (var key in original) copy[key] = original[key];
+    if (typeof original.content === 'string') copy.content = rec + '\n\n' + original.content;
+    else if (Array.isArray(original.content)) copy.content = [{ type: 'text', text: rec }].concat(original.content);
+    else copy.content = rec;
+    var out = msgs.slice();
+    out[index] = copy;
+    return out;
+  }
+
   function ctx(msgs) {
     var full = Array.isArray(msgs) ? msgs : [];
     try {
@@ -730,21 +766,42 @@
       while (out.length > 1 && out[0] && out[0].role === 'latest_reminder' && out[1] && out[1].role !== 'user') {
         out = out.slice(1);
       }
-      var chars = 0;
-      for (var k = 0; k < out.length; k++) chars += sizeOf(out[k]);
+      var recallSource = out;
+      var lastUserIndex = -1;
+      for (var q = recallSource.length - 1; q >= 0; q--) {
+        if (recallSource[q] && recallSource[q].role === 'user') {
+          lastUserIndex = q;
+          break;
+        }
+      }
+      var snapshots = s.recallEnabled ? readRaw(RECALL_SNAPSHOTS) : {};
+      api.lastRecall = [];
       try {
-        var lastUser = '';
-        for (var q = out.length - 1; q >= 0; q--) {
-          if (out[q] && out[q].role === 'user') {
-            lastUser = typeof out[q].content === 'string' ? out[q].content : '';
-            break;
+        if (s.recallEnabled && lastUserIndex >= 0) {
+          var lastUser = paramText(recallSource[lastUserIndex]);
+          var snapshotKey = recallContextKey(recallSource, lastUserIndex);
+          if (Object.prototype.hasOwnProperty.call(snapshots, snapshotKey) && Array.isArray(snapshots[snapshotKey])) {
+            api.lastRecall = snapshots[snapshotKey];
+          } else if (lastUser) {
+            var pool = recallFor(lastUser, Math.max(6, s.recallTopK * 3));
+            api.lastRecall = dedupeRecall(pool, recallSource, s).slice(0, s.recallTopK);
+            saveRecallSnapshot(snapshots, snapshotKey, api.lastRecall);
           }
         }
-        var pool = s.recallEnabled && lastUser ? recallFor(lastUser, Math.max(6, s.recallTopK * 3)) : [];
-        api.lastRecall = s.recallEnabled ? dedupeRecall(pool, out, s).slice(0, s.recallTopK) : [];
       } catch (e) {
         api.lastRecall = [];
       }
+      if (s.recallEnabled) {
+        // 每轮召回保存在对应 user 的快照中。本轮变成历史后仍逐字不变，缓存前缀不会断开。
+        for (var r = 0; r < recallSource.length; r++) {
+          if (!recallSource[r] || recallSource[r].role !== 'user') continue;
+          var list = r === lastUserIndex ? api.lastRecall : snapshots[recallContextKey(recallSource, r)];
+          var rec = recallBlock(list);
+          if (rec) out = withRecall(out, r, rec);
+        }
+      }
+      var chars = 0;
+      for (var k = 0; k < out.length; k++) chars += sizeOf(out[k]);
       api.lastCtx = {
         at: Date.now(),
         total: full.length,
