@@ -700,14 +700,28 @@
       var s = getSettings();
       var out = full;
       if (s.compressedHashes.length) {
-        // 压缩后只保留最近若干轮：从末尾往回找到最近一条 user 作为起点，
-        // 保证序列以 user 开头、user/assistant 成对——逐条按哈希剔除会破坏交替，服务端直接 400，
-        // 表现就是「压缩完 AI 不回复」。
-        var keepRecent = 6;
-        var start = Math.max(0, full.length - keepRecent);
-        while (start > 0 && (!full[start] || full[start].role !== 'user')) start -= 1;
-        var kept = full.slice(start);
-        if (!kept.length) kept = full;
+        // 只剔除实际压缩过的完整轮次。compressedHashes 是全局设置，不能因为它非空
+        // 就裁掉其他会话；未压缩及压缩后新增的上下文都应完整保留到下一次压缩。
+        var skip = {};
+        for (var h = 0; h < s.compressedHashes.length; h++) skip[s.compressedHashes[h]] = true;
+        var removed = [];
+        for (var i = 0; i < full.length - 1; i++) {
+          if (!full[i] || !full[i + 1] || full[i].role !== 'user' || full[i + 1].role !== 'assistant') continue;
+          // 必须成对命中，避免跨会话相同用户文本造成半轮删除、角色交替被破坏。
+          if (skip[hashOf(full[i])] && skip[hashOf(full[i + 1])]) {
+            removed[i] = true;
+            removed[i + 1] = true;
+            i++;
+          }
+        }
+        var kept = [];
+        for (var j = 0; j < full.length; j++) {
+          if (removed[j]) continue;
+          // latest_reminder 依附于后一条 user；该轮被压缩时一并剔除。
+          if (full[j] && full[j].role === 'latest_reminder' &&
+              (!full[j + 1] || full[j + 1].role !== 'user' || removed[j + 1])) continue;
+          kept.push(full[j]);
+        }
         out = kept;
       }
       // 首条不能是 assistant

@@ -21,7 +21,9 @@ export const useEnhanceSetting = <K extends keyof EnhancementSettings>(
 export const readAvatarSrc = (): string => {
   try {
     const saved = localStorage.getItem('dshx:avatar')
-    if (saved) return saved
+    if (saved) {
+      return saved
+    }
   } catch {
     // ignore
   }
