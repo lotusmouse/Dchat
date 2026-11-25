@@ -15,11 +15,13 @@
   cursor: text;
   font-size: 16px;
   line-height: var(--line-height);
-  border: 1px solid rgba(255, 255, 255, 0.74);
+  border: 1px solid rgba(255, 255, 255, 0.64);
   border-radius: 24px;
-  background: rgba(255, 255, 255, 0.68);
-  -webkit-backdrop-filter: blur(24px) saturate(0.75);
-  backdrop-filter: blur(24px) saturate(0.75);
+  background:
+    radial-gradient(120% 100% at 0% 0%, rgba(255, 255, 255, 0.32) 0%, rgba(255, 255, 255, 0) 52%),
+    linear-gradient(125deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.05) 48%, rgba(255, 255, 255, 0.14) 100%);
+  -webkit-backdrop-filter: blur(28px) saturate(1.35);
+  backdrop-filter: blur(28px) saturate(1.35);
   overflow: hidden;
 
   [data-ds-dark-theme] & {
@@ -30,21 +32,27 @@
     --dsw-alias-button-ghost-active-fill: rgba(255, 255, 255, 0.1);
     --dsw-alias-button-ghost-active-border: rgba(255, 255, 255, 0.14);
     --dsw-alias-button-ghost-active-hover: rgba(255, 255, 255, 0.14);
-    border-color: rgba(255, 255, 255, 0.12);
-    background: rgba(24, 24, 24, 0.72);
+    border-color: rgba(255, 255, 255, 0.18);
+    background:
+      radial-gradient(120% 100% at 0% 0%, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 52%),
+      linear-gradient(125deg, rgba(42, 42, 48, 0.3) 0%, rgba(18, 18, 22, 0.12) 52%, rgba(38, 38, 44, 0.24) 100%);
   }
 }
 
 .session,
 .home {
   box-shadow:
-    0 12px 36px rgba(0, 0, 0, 0.12),
-    inset 0 1px 0 rgba(255, 255, 255, 0.58);
+    0 16px 44px rgba(0, 0, 0, 0.1),
+    0 0 0 1px rgba(20, 20, 28, 0.035),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.18);
 
   [data-ds-dark-theme] & {
     box-shadow:
-      0 14px 40px rgba(0, 0, 0, 0.42),
-      inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      0 16px 44px rgba(0, 0, 0, 0.36),
+      0 0 0 1px rgba(255, 255, 255, 0.035),
+      inset 0 1px 0 rgba(255, 255, 255, 0.16),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.05);
   }
 }
 
