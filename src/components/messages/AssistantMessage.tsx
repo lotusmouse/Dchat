@@ -94,22 +94,30 @@ export const AssistantMessage = memo(function AssistantMessage({
           ))}
         </div>
       ) : answer ? (
-        <div className={clsx(styles.assistantRow, showAvatars && styles.withAvatar)}>
-          {showAvatars ? <ChatAvatar role="assistant" /> : null}
-          <div
-            className={clsx(styles.assistantBubble, (splitBubbles || showAvatars) && styles.bubbleOn)}
-            data-dshx-bubble="ai"
-          >
-            <Markdown
-              className="ds-assistant-message-main-content"
-              content={answer.markdown}
-              loading={streaming}
-              cacheKey={message.id}
-              disableLink={false}
-              sources={view.sources}
-            />
+        splitBubbles || showAvatars ? (
+          <div className={clsx(styles.assistantRow, showAvatars && styles.withAvatar)}>
+            {showAvatars ? <ChatAvatar role="assistant" /> : null}
+            <div className={clsx(styles.assistantBubble, styles.bubbleOn)} data-dshx-bubble="ai">
+              <Markdown
+                className="ds-assistant-message-main-content"
+                content={answer.markdown}
+                loading={streaming}
+                cacheKey={message.id}
+                disableLink={false}
+                sources={view.sources}
+              />
+            </div>
           </div>
-        </div>
+        ) : (
+          <Markdown
+            className="ds-assistant-message-main-content"
+            content={answer.markdown}
+            loading={streaming}
+            cacheKey={message.id}
+            disableLink={false}
+            sources={view.sources}
+          />
+        )
       ) : null}
       {waiting ? (
         <div className={styles.waiting}>

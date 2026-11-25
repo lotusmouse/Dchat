@@ -49,13 +49,6 @@ export const UserMessage = memo(function UserMessage({
   const splitBubbles = useEnhanceSetting('bubbleSplit')
   const showAvatars = useEnhanceSetting('showAvatars')
   const canSend = !busy && (draft.trim() !== '' || message.files.length > 0)
-  // 不分气泡时，把消息里的硬换行合并成空格：让文字自然流到气泡边缘再折行
-  const flowText = splitBubbles
-    ? message.content
-    : String(message.content || '')
-        .replace(/\s*\r?\n+\s*/g, ' ')
-        .trim()
-
   const bubbleParts =
     splitBubbles && message.content ? splitIntoBubbles(message.content) : []
 
@@ -138,12 +131,16 @@ export const UserMessage = memo(function UserMessage({
                 </div>
               ))}
             </div>
-          ) : (
-            <div className={clsx(styles.bubbleRow, showAvatars && styles.withAvatar)}>
-              {showAvatars ? <ChatAvatar role="user" /> : null}
-              {flowText ? <div className={styles.bubble} data-dshx-bubble="user">{flowText}</div> : null}
+          ) : showAvatars ? (
+            <div className={clsx(styles.bubbleRow, styles.withAvatar)}>
+              <ChatAvatar role="user" />
+              {message.content ? (
+                <div className={styles.bubble} data-dshx-bubble="user">{message.content}</div>
+              ) : null}
             </div>
-          )}
+          ) : message.content ? (
+            <div className={styles.bubble} data-dshx-bubble="user">{message.content}</div>
+          ) : null}
           <div className={styles.bottom}>
             <div className={clsx(styles.actions, isLast && styles.alwaysShow)}>
               {message.content ? <CopyButton text={message.content} /> : null}

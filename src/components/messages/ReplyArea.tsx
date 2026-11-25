@@ -168,10 +168,10 @@ const StepItem = ({
           </div>
         )
       }
-      return (
+      return splitBubbles || showAvatars ? (
         <div className={clsx(styles.assistantRow, showAvatars && styles.withAvatar)}>
           {showAvatars ? <ChatAvatar role="assistant" /> : null}
-          <div className={clsx(styles.assistantBubble, (splitBubbles || showAvatars) && styles.bubbleOn)} data-dshx-bubble="ai">
+          <div className={clsx(styles.assistantBubble, styles.bubbleOn)} data-dshx-bubble="ai">
             <Markdown
               content={step.markdown}
               loading={streaming && isLast}
@@ -181,6 +181,14 @@ const StepItem = ({
             />
           </div>
         </div>
+      ) : (
+        <Markdown
+          content={step.markdown}
+          loading={streaming && isLast}
+          cacheKey={`${message.id}-${step.key}`}
+          disableLink={false}
+          sources={sources}
+        />
       )
     }
     case 'search':
