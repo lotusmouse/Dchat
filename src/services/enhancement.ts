@@ -52,7 +52,7 @@ type EnhancementCore = {
   defaults: EnhancementSettings
   refreshRecall(force?: boolean): Promise<number>
   lastRecall: { user: string; answer: string }[] | null
-  compressNow(): Promise<{ chars: number; compressed: number }>
+  compressNow(opts?: { keepRecent?: number }): Promise<{ chars: number; compressed: number; remaining: number; tokens: number }>
   resetCompression(): void
   fetchModels(): Promise<string[]>
   fetchBalance(force?: boolean): Promise<EnhancementBalance & { at: number }>

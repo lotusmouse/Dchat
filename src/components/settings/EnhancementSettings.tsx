@@ -96,6 +96,10 @@ const EnhancementContent = ({ core }: { core: Core }) => {
   const [customCss, setCustomCss] = useState(core.getCustomCss())
   const [customCssAi, setCustomCssAi] = useState(core.getCustomCssAi())
   const [usage, setUsage] = useState(core.lastUsage)
+  const [contextTokens, setContextTokens] = useState<number | null>(() => {
+    const current = core.lastUsage
+    return current ? current.input + current.cacheRead + current.cacheWrite : core.lastCtx?.tokens ?? null
+  })
   const [balance, setBalance] = useState(core.lastBalance)
   const appIcon = useAppIcon()
 
@@ -104,9 +108,26 @@ const EnhancementContent = ({ core }: { core: Core }) => {
   }, [page])
 
   useEffect(() => {
-    const onUsage = () => setUsage(core.lastUsage)
+    const onUsage = () => {
+      const current = core.lastUsage
+      setUsage(current)
+      if (current) {
+        const realInput = current.input + current.cacheRead + current.cacheWrite
+        setContextTokens(realInput || core.lastCtx?.tokens || 0)
+      }
+    }
+    const onCompress = (event: Event) => {
+      const detail = (event as CustomEvent<{ tokens?: number }>).detail
+      if (typeof detail?.tokens === 'number') {
+        setContextTokens(detail.tokens)
+      }
+    }
     window.addEventListener('dshx:usage', onUsage)
-    return () => window.removeEventListener('dshx:usage', onUsage)
+    window.addEventListener('dshx:compress', onCompress)
+    return () => {
+      window.removeEventListener('dshx:usage', onUsage)
+      window.removeEventListener('dshx:compress', onCompress)
+    }
   }, [core])
 
   const update = (patch: Partial<Settings>) => setSettings(core.saveSettings(patch))
@@ -384,7 +405,7 @@ const EnhancementContent = ({ core }: { core: Core }) => {
       <Section title="上下文与用量">
         <Row label="自动压缩" description="上下文达到阈值时，把较早的对话压成摘要，只保留最近 6 条原文" action={<Toggle label="自动压缩" checked={settings.autoCompress} onChange={() => update({ autoCompress: !settings.autoCompress })} />} />
         <Row label="压缩阈值" description="8,000 – 128,000 tokens" action={<input className={styles.enhanceNumber} type="number" min={8000} max={128000} step={1000} value={settings.compressAt} onChange={(event) => update({ compressAt: Math.min(128000, Math.max(8000, Number(event.target.value) || 100000)) })} />} />
-        {usage ? <div className={styles.description}>上下文约 {usage.input + usage.cacheRead + usage.cacheWrite} / {settings.compressAt.toLocaleString()} tokens</div> : null}
+        {contextTokens !== null ? <div className={styles.description}>上下文约 {contextTokens} / {settings.compressAt.toLocaleString()} tokens</div> : null}
         {usage ? <div className={styles.description}>本轮：输入 {usage.input} · 缓存 {usage.cacheRead} · 输出 {usage.output}</div> : null}
         <div className={styles.enhanceActions}>
           <Button variant="outlined" size="s" disabled={busy} onClick={() => void run(async () => { const result = await core.compressNow(); showToast(`已将 ${result.compressed} 条消息压缩为摘要`) })}>立即压缩</Button>

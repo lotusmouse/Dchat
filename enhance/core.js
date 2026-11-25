@@ -327,9 +327,14 @@
     s.autoCompress = s.autoCompress !== false;
     s.showUsage = s.showUsage !== false;
     s.items = Array.isArray(s.items) ? s.items.map(normalizeItem).filter(Boolean) : [];
-    s.compressedHashes = Array.isArray(s.compressedHashes) ? s.compressedHashes.filter(function (h) { return typeof h === 'string'; }) : [];
+    var compressedSeen = {};
+    s.compressedHashes = Array.isArray(s.compressedHashes) ? s.compressedHashes.filter(function (h) {
+      if (typeof h !== 'string' || compressedSeen[h]) return false;
+      compressedSeen[h] = true;
+      return true;
+    }) : [];
     s.compressAt = Math.min(128000, Math.max(8000, Number(s.compressAt) || 100000));
-    if (s.compressedHashes.length > 800) s.compressedHashes = s.compressedHashes.slice(-800);
+    // 不能按固定条数丢弃旧标记，否则最早的消息会在后续请求中重新进入上下文。
     return s;
   }
 
@@ -745,36 +750,38 @@
     return out;
   }
 
+  function withoutCompressed(full, compressedHashes) {
+    if (!compressedHashes.length) return full;
+    // 只剔除实际压缩过的完整轮次。compressedHashes 是全局设置，不能因为它非空
+    // 就裁掉其他会话；未压缩及压缩后新增的上下文都应完整保留到下一次压缩。
+    var skip = {};
+    for (var h = 0; h < compressedHashes.length; h++) skip[compressedHashes[h]] = true;
+    var removed = [];
+    for (var i = 0; i < full.length - 1; i++) {
+      if (!full[i] || !full[i + 1] || full[i].role !== 'user' || full[i + 1].role !== 'assistant') continue;
+      // 必须成对命中，避免跨会话相同用户文本造成半轮删除、角色交替被破坏。
+      if (skip[hashOf(full[i])] && skip[hashOf(full[i + 1])]) {
+        removed[i] = true;
+        removed[i + 1] = true;
+        i++;
+      }
+    }
+    var kept = [];
+    for (var j = 0; j < full.length; j++) {
+      if (removed[j]) continue;
+      // latest_reminder 依附于后一条 user；该轮被压缩时一并剔除。
+      if (full[j] && full[j].role === 'latest_reminder' &&
+          (!full[j + 1] || full[j + 1].role !== 'user' || removed[j + 1])) continue;
+      kept.push(full[j]);
+    }
+    return kept;
+  }
+
   function ctx(msgs) {
     var full = Array.isArray(msgs) ? msgs : [];
     try {
       var s = getSettings();
-      var out = full;
-      if (s.compressedHashes.length) {
-        // 只剔除实际压缩过的完整轮次。compressedHashes 是全局设置，不能因为它非空
-        // 就裁掉其他会话；未压缩及压缩后新增的上下文都应完整保留到下一次压缩。
-        var skip = {};
-        for (var h = 0; h < s.compressedHashes.length; h++) skip[s.compressedHashes[h]] = true;
-        var removed = [];
-        for (var i = 0; i < full.length - 1; i++) {
-          if (!full[i] || !full[i + 1] || full[i].role !== 'user' || full[i + 1].role !== 'assistant') continue;
-          // 必须成对命中，避免跨会话相同用户文本造成半轮删除、角色交替被破坏。
-          if (skip[hashOf(full[i])] && skip[hashOf(full[i + 1])]) {
-            removed[i] = true;
-            removed[i + 1] = true;
-            i++;
-          }
-        }
-        var kept = [];
-        for (var j = 0; j < full.length; j++) {
-          if (removed[j]) continue;
-          // latest_reminder 依附于后一条 user；该轮被压缩时一并剔除。
-          if (full[j] && full[j].role === 'latest_reminder' &&
-              (!full[j + 1] || full[j + 1].role !== 'user' || removed[j + 1])) continue;
-          kept.push(full[j]);
-        }
-        out = kept;
-      }
+      var out = withoutCompressed(full, s.compressedHashes);
       // 首条不能是 assistant
       while (out.length > 1 && out[0] && out[0].role === 'assistant') out = out.slice(1);
       // 悬空的 latest_reminder 去掉
@@ -1083,7 +1090,8 @@
 
   var COMPRESS_SYSTEM =
     '你是上下文压缩器。把给定对话压缩成 300 字以内的中文摘要，保留：用户的目标与偏好、已确认的事实与决定、' +
-    '待办与未完成事项、关键结论和技术细节要点。不要寒暄，不要输出摘要之外的话。';
+    '待办与未完成事项、关键结论和技术细节要点。若提供已有摘要，把它与新增对话合并成一份连贯摘要，' +
+    '不要重复已有内容，不要丢失仍然有效的信息。不要寒暄，不要输出摘要之外的话。';
 
   var compressBusy = false;
 
@@ -1091,16 +1099,24 @@
     if (compressBusy) throw new Error('正在压缩，请稍后');
     var s = getSettings();
     if (!getKey()) throw new Error('还没有填写 API Key');
-    var snap = lastSnapshot();
+    // 以上次压缩标记为游标：本轮只处理尚未压缩的消息，不重新提交整段历史。
+    var snap = withoutCompressed(lastSnapshot(), s.compressedHashes);
     var convo = [];
     for (var i = 0; i < snap.length; i++) {
       if (snap[i] && (snap[i].role === 'user' || snap[i].role === 'assistant')) convo.push(snap[i]);
     }
     var keepRecent = (opts && opts.keepRecent) || 6;
-    if (convo.length <= keepRecent + 2) throw new Error('对话还太短，暂时不用压缩');
+    if (convo.length <= keepRecent + 2) throw new Error('上次压缩后还没有足够多的新对话');
     var old = convo.slice(0, convo.length - keepRecent);
-    var body = transcriptFrom(old, 24000);
-    if (!body.trim()) throw new Error('没有可压缩的内容');
+    var transcript = transcriptFrom(old, 24000);
+    if (!transcript.trim()) throw new Error('没有可压缩的内容');
+    var previousSummaries = [];
+    for (var p = 0; p < s.items.length; p++) {
+      if (s.items[p].kind === 'summary' && s.items[p].text.trim()) previousSummaries.push(s.items[p].text.trim());
+    }
+    var body = previousSummaries.length
+      ? '【已有摘要】\n' + previousSummaries.join('\n\n') + '\n\n【新增对话】\n' + transcript
+      : transcript;
 
     compressBusy = true;
     try {
@@ -1111,10 +1127,26 @@
       items.unshift({ id: 's' + Math.random().toString(36).slice(2, 10), text: text, enabled: true, kind: 'summary', compress: true });
 
       var hashes = s.compressedHashes.slice();
-      for (var j = 0; j < old.length; j++) hashes.push(hashOf(old[j]));
+      var hashSeen = {};
+      for (var h = 0; h < hashes.length; h++) hashSeen[hashes[h]] = true;
+      for (var j = 0; j < old.length; j++) {
+        var hash = hashOf(old[j]);
+        if (hashSeen[hash]) continue;
+        hashSeen[hash] = true;
+        hashes.push(hash);
+      }
       saveSettings({ items: items, compressedHashes: hashes });
-      window.dispatchEvent(new CustomEvent('dshx:compress', { detail: { chars: text.length, compressed: old.length } }));
-      return { chars: text.length, compressed: old.length, summary: text };
+
+      // 立即按压缩后的实际消息重算，不再继续展示压缩前那一轮的服务端用量。
+      var remaining = 0;
+      var tokens = 0;
+      if (api.lastCtx && Array.isArray(api.lastCtx.snapshot)) {
+        remaining = ctx(api.lastCtx.snapshot).length;
+        tokens = api.lastCtx.tokens;
+      }
+      var detail = { chars: text.length, compressed: old.length, remaining: remaining, tokens: tokens };
+      window.dispatchEvent(new CustomEvent('dshx:compress', { detail: detail }));
+      return { chars: text.length, compressed: old.length, remaining: remaining, tokens: tokens, summary: text };
     } finally {
       compressBusy = false;
     }
