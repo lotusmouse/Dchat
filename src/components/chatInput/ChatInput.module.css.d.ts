@@ -19,6 +19,7 @@ declare const styles: {
   readonly "selected": string;
   readonly "right": string;
   readonly "sendButton": string;
+  readonly "actionButton": string;
   readonly "disabled": string;
 };
 export = styles;

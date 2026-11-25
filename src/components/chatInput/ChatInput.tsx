@@ -244,6 +244,7 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
           <IconButton
             size="m"
             tone="primary"
+            className={styles.actionButton}
             icon={<IconPaperclipOutline16 />}
             tooltip={t('uploadFile')}
             disabled={importingHistory}

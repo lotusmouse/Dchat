@@ -24,26 +24,48 @@
   width: 34px;
   height: 34px;
   padding: 0;
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.42);
   border-radius: 50%;
-  background-color: transparent;
+  background: rgba(255, 255, 255, 0.07);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  backdrop-filter: blur(14px) saturate(1.4);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
   color: var(--dsw-alias-label-primary);
   cursor: pointer;
   outline: none;
-  transition: background-color var(--ds-transition-duration) var(--ds-ease-in-out);
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
 
   &:active:not(.recording):not(.disabled) {
-    background-color: var(--dsw-alias-interactive-bg-hover);
+    background: rgba(255, 255, 255, 0.16);
+    transform: scale(0.94);
   }
 
   @media (hover: hover) {
     &:hover:not(.recording):not(.disabled) {
-      background-color: var(--dsw-alias-interactive-bg-hover);
+      border-color: rgba(255, 255, 255, 0.6);
+      background: rgba(255, 255, 255, 0.15);
     }
   }
 
   &:focus-visible {
-    box-shadow: 0 0 0 2px var(--dsw-alias-button-primary-fill);
+    outline: 2px solid rgba(24, 24, 24, 0.48);
+    outline-offset: 2px;
+  }
+
+  [data-ds-dark-theme] & {
+    border-color: rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.04);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+
+    &:hover:not(.recording):not(.disabled),
+    &:active:not(.recording):not(.disabled) {
+      border-color: rgba(255, 255, 255, 0.22);
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    &:focus-visible {
+      outline-color: rgba(255, 255, 255, 0.62);
+    }
   }
 }
 

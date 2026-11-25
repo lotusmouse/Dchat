@@ -1,7 +1,7 @@
 .sider {
-  --dsw-specific-sidebar-fill: rgba(250, 250, 250, 0.88);
-  --dsw-specific-sidebar-nav-item-active-accent: rgba(17, 17, 20, 0.07);
-  --dsw-specific-sidebar-nav-item-hover: rgba(17, 17, 20, 0.045);
+  --dsw-specific-sidebar-fill: rgba(250, 250, 250, 0.32);
+  --dsw-specific-sidebar-nav-item-active-accent: rgba(255, 255, 255, 0.14);
+  --dsw-specific-sidebar-nav-item-hover: rgba(255, 255, 255, 0.09);
   --dsw-alias-brand-primary: #111114;
   display: flex;
   flex-direction: column;
@@ -11,21 +11,25 @@
   height: calc(100% - 16px);
   margin: 8px;
   padding: 6px 12px 0;
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.44);
   border-radius: 22px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(246, 246, 248, 0.7));
-  -webkit-backdrop-filter: blur(26px) saturate(0.8);
-  backdrop-filter: blur(26px) saturate(0.8);
-  box-shadow: 0 16px 40px rgba(17, 17, 20, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  background:
+    radial-gradient(130% 45% at 0% 0%, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0) 64%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.07), rgba(246, 246, 248, 0.025) 54%, rgba(255, 255, 255, 0.055));
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+  backdrop-filter: blur(24px) saturate(1.4);
+  box-shadow: 0 16px 40px rgba(17, 17, 20, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.64);
 
   [data-ds-dark-theme] & {
-    --dsw-specific-sidebar-fill: rgba(30, 30, 32, 0.9);
-    --dsw-specific-sidebar-nav-item-active-accent: rgba(255, 255, 255, 0.1);
-    --dsw-specific-sidebar-nav-item-hover: rgba(255, 255, 255, 0.06);
+    --dsw-specific-sidebar-fill: rgba(30, 30, 32, 0.34);
+    --dsw-specific-sidebar-nav-item-active-accent: rgba(255, 255, 255, 0.09);
+    --dsw-specific-sidebar-nav-item-hover: rgba(255, 255, 255, 0.05);
     --dsw-alias-brand-primary: #f2f2f7;
-    border-color: rgba(255, 255, 255, 0.08);
-    background: linear-gradient(180deg, rgba(38, 38, 42, 0.72), rgba(22, 22, 24, 0.66));
-    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.1);
+    background:
+      radial-gradient(130% 45% at 0% 0%, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0) 64%),
+      linear-gradient(145deg, rgba(38, 38, 42, 0.13), rgba(22, 22, 24, 0.045) 54%, rgba(38, 38, 42, 0.1));
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.08);
   }
 }
 
@@ -68,32 +72,46 @@
   height: 40px;
   padding: 0 16px;
   border-radius: 100px;
-  border: 1px solid rgba(103, 158, 254, 0);
-  background: var(--dsw-alias-button-elevated-fill);
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.03));
+  -webkit-backdrop-filter: blur(14px) saturate(1.35);
+  backdrop-filter: blur(14px) saturate(1.35);
   color: var(--dsw-alias-label-primary);
   font: inherit;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   user-select: none;
-  box-shadow:
-    0 -2px 2px rgba(72, 104, 178, 0.04),
-    0 2px 2px rgba(106, 111, 117, 0.09),
-    0 1px 2px rgba(72, 104, 178, 0.08);
-  transition: box-shadow 0.3s ease;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.58), 0 4px 14px rgba(17, 17, 20, 0.045);
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
 
   &:hover {
-    box-shadow:
-      0 4px 4px 0 rgba(72, 104, 178, 0.04),
-      0 -3px 4px 0 rgba(72, 104, 178, 0.04),
-      0 6px 6px 0 rgba(106, 111, 117, 0.1);
+    border-color: rgba(255, 255, 255, 0.6);
+    background: rgba(255, 255, 255, 0.16);
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba(24, 24, 24, 0.48);
+    outline-offset: 2px;
   }
 
   [data-ds-dark-theme] & {
-    border: none;
-    box-shadow:
-      inset 0 1px 1px rgba(255, 255, 255, 0.1),
-      0 2px 4px rgba(106, 111, 117, 0.08);
+    border-color: rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.04);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+
+    &:hover {
+      border-color: rgba(255, 255, 255, 0.22);
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    &:focus-visible {
+      outline-color: rgba(255, 255, 255, 0.62);
+    }
   }
 }
 
@@ -242,11 +260,17 @@
   margin: 0;
   padding: 14px 12px 0;
   border: none;
+  border-right: 1px solid rgba(255, 255, 255, 0.38);
   border-radius: 0 24px 24px 0;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(246, 246, 248, 0.94));
+  background:
+    radial-gradient(130% 36% at 0% 0%, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 68%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(246, 246, 248, 0.035) 58%, rgba(255, 255, 255, 0.065));
 
   [data-ds-dark-theme] & {
-    background: linear-gradient(180deg, rgba(38, 38, 42, 0.96), rgba(22, 22, 24, 0.94));
+    border-right-color: rgba(255, 255, 255, 0.1);
+    background:
+      radial-gradient(130% 36% at 0% 0%, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0) 68%),
+      linear-gradient(145deg, rgba(38, 38, 42, 0.14), rgba(22, 22, 24, 0.05) 58%, rgba(38, 38, 42, 0.11));
   }
 
   .top,
@@ -262,9 +286,12 @@
     box-sizing: border-box;
     height: 46px;
     padding: 0 15px;
-    border: 1px solid rgba(0, 0, 0, 0.055);
+    border: 1px solid rgba(255, 255, 255, 0.36);
     border-radius: 24px;
-    background: rgba(255, 255, 255, 0.58);
+    background: rgba(255, 255, 255, 0.08);
+    -webkit-backdrop-filter: blur(14px) saturate(1.35);
+    backdrop-filter: blur(14px) saturate(1.35);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.48);
     color: var(--dsw-alias-label-tertiary);
 
     svg {
