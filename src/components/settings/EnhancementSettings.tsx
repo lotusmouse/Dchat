@@ -34,6 +34,38 @@ const entries: { page: Exclude<EnhancementPage, 'home'>; label: string }[] = [
   { page: 'backup', label: '增强设置备份' },
 ]
 
+const REFINED_GLASS_BUBBLE_CSS = `[data-dshx-bubble="user"],
+[data-dshx-bubble="ai"] {
+  box-sizing: border-box;
+  padding: 7px 12px !important;
+  border: 1px solid rgba(255, 255, 255, 0.50);
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.38), rgba(255, 255, 255, 0.18)) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(1.35);
+  backdrop-filter: blur(18px) saturate(1.35);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.64),
+    0 4px 14px rgba(0, 0, 0, 0.07);
+  color: #1f1f1f;
+  font-size: 14px;
+  line-height: 22px;
+}
+
+[data-dshx-bubble="ai"] .ds-markdown {
+  font-size: 14px;
+  line-height: 22px;
+}
+
+[data-ds-dark-theme] [data-dshx-bubble="user"],
+[data-ds-dark-theme] [data-dshx-bubble="ai"] {
+  border-color: rgba(255, 255, 255, 0.15);
+  background: linear-gradient(135deg, rgba(48, 48, 52, 0.44), rgba(24, 24, 28, 0.28)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.11),
+    0 4px 14px rgba(0, 0, 0, 0.18);
+  color: #f5f5f5;
+}`
+
 const Row = ({ label, action }: { label: string; description?: string; action: ReactNode }) => (
   <div className={clsx(styles.cell, styles.row)}>
     <div className={styles.text}>
@@ -499,6 +531,16 @@ const EnhancementContent = ({ core }: { core: Core }) => {
         />
         <Row label="聊天背景" description={background ? '已设置自定义背景图' : '使用默认背景'} action={<div className={styles.enhanceActions}><Button variant="outlined" size="s" onClick={pickBackground}>{background ? '更换' : '上传'}</Button>{background ? <Button variant="outlined" size="s" onClick={() => { core.setChatBg(''); setBackground('') }}>移除</Button> : null}</div>} />
         <Row label="我的气泡颜色" action={<Select ariaLabel="我的气泡颜色" className={styles.bubbleColorSelect} value={bubble} options={[{ value: '', label: '默认' }, { value: '#dbeafe', label: '雾蓝' }, { value: '#d9f2ff', label: '天蓝' }, { value: '#dcfce7', label: '薄荷' }, { value: '#fde2e4', label: '樱粉' }, { value: '#fef3c7', label: '奶黄' }, { value: '#ede9fe', label: '香芋' }, { value: '#e5e7eb', label: '浅灰' }, { value: '#111827', label: '墨黑' }]} onChange={(value) => { core.setBubbleColor(value); setBubble(value) }} />} />
+        <Row
+          label="气泡预设"
+          action={<Button variant="outlined" size="s" onClick={() => {
+            core.setCustomCss(REFINED_GLASS_BUBBLE_CSS)
+            core.setCustomCssAi(REFINED_GLASS_BUBBLE_CSS)
+            setCustomCss(REFINED_GLASS_BUBBLE_CSS)
+            setCustomCssAi(REFINED_GLASS_BUBBLE_CSS)
+            showToast('精致玻璃预设已应用到两侧气泡')
+          }}>精致玻璃</Button>}
+        />
         <label className={styles.enhanceCssLabel}>我的气泡 CSS<textarea className={styles.enhanceTextarea} rows={3} value={customCss} onChange={(event) => setCustomCss(event.target.value)} spellCheck={false} /></label>
         <Button variant="outlined" size="s" onClick={() => { core.setCustomCss(customCss); showToast('我的气泡样式已应用') }}>应用我的气泡 CSS</Button>
         <label className={styles.enhanceCssLabel}>助手气泡 CSS<textarea className={styles.enhanceTextarea} rows={3} value={customCssAi} onChange={(event) => setCustomCssAi(event.target.value)} spellCheck={false} /></label>
