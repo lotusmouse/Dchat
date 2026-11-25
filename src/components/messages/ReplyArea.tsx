@@ -154,7 +154,7 @@ const StepItem = ({
                 className={clsx(styles.assistantRow, showAvatars && styles.withAvatar)}
               >
                 {showAvatars ? <ChatAvatar role="assistant" /> : null}
-                <div className={clsx(styles.assistantBubble, (splitBubbles || showAvatars) && styles.bubbleOn)}>
+                <div className={clsx(styles.assistantBubble, (splitBubbles || showAvatars) && styles.bubbleOn)} data-dshx-bubble="ai">
                   <Markdown
                     content={line}
                     loading={streaming && isLast && index === lines.length - 1}
@@ -171,7 +171,7 @@ const StepItem = ({
       return (
         <div className={clsx(styles.assistantRow, showAvatars && styles.withAvatar)}>
           {showAvatars ? <ChatAvatar role="assistant" /> : null}
-          <div className={clsx(styles.assistantBubble, (splitBubbles || showAvatars) && styles.bubbleOn)}>
+          <div className={clsx(styles.assistantBubble, (splitBubbles || showAvatars) && styles.bubbleOn)} data-dshx-bubble="ai">
             <Markdown
               content={step.markdown}
               loading={streaming && isLast}
