@@ -23,22 +23,21 @@ const sectionPages: Record<string, EnhancementPage> = {
   外观增强: 'appearance',
   增强设置备份: 'backup',
 }
-const entries: { page: Exclude<EnhancementPage, 'home'>; label: string; description: string }[] = [
-  { page: 'account', label: '账户', description: '余额查询与充值' },
-  { page: 'prompt', label: '系统提示词', description: '自定义助手提示词' },
-  { page: 'memory', label: '长期记忆', description: '常驻记忆与历史回忆' },
-  { page: 'context', label: '上下文与用量', description: '上下文压缩与本轮用量' },
-  { page: 'model', label: '模型与风控', description: '模型选择与内容风控' },
-  { page: 'voice', label: '语音通话', description: '免手持与通话设置' },
-  { page: 'appearance', label: '外观增强', description: '聊天背景、气泡与自定义 CSS' },
-  { page: 'backup', label: '增强设置备份', description: '导入或导出增强设置 JSON' },
+const entries: { page: Exclude<EnhancementPage, 'home'>; label: string }[] = [
+  { page: 'account', label: '账户' },
+  { page: 'prompt', label: '系统提示词' },
+  { page: 'memory', label: '长期记忆' },
+  { page: 'context', label: '上下文与用量' },
+  { page: 'model', label: '模型与风控' },
+  { page: 'voice', label: '语音通话' },
+  { page: 'appearance', label: '外观增强' },
+  { page: 'backup', label: '增强设置备份' },
 ]
 
-const Row = ({ label, description, action }: { label: string; description?: string; action: ReactNode }) => (
+const Row = ({ label, action }: { label: string; description?: string; action: ReactNode }) => (
   <div className={clsx(styles.cell, styles.row)}>
     <div className={styles.text}>
       <div className={styles.label}>{label}</div>
-      {description ? <div className={styles.description}>{description}</div> : null}
     </div>
     {action}
   </div>
@@ -321,7 +320,6 @@ const EnhancementContent = ({ core }: { core: Core }) => {
               >
                 <span className={styles.enhanceEntryText}>
                   <span className={styles.enhanceEntryLabel}>{entry.label}</span>
-                  <span className={styles.enhanceEntryDescription}>{entry.description}</span>
                 </span>
                 <span className={styles.enhanceChevron} aria-hidden="true">›</span>
               </button>
@@ -335,18 +333,22 @@ const EnhancementContent = ({ core }: { core: Core }) => {
         <Section title="账户">
         <Row
           label="账户余额"
-          description={balance ? `${core.fmtMoney(balance.total, balance.currency)}${balance.available ? '' : '（余额不足）'}` : '使用当前 API Key 查询'}
-          action={<Button variant="outlined" size="m" disabled={busy || !core.getKey()} onClick={() => void run(async () => { setBalance(await core.fetchBalance(true)) })}>查询余额</Button>}
+          action={
+            <div className={styles.enhanceActions}>
+              {balance ? <span className={styles.description}>{core.fmtMoney(balance.total, balance.currency)}{balance.available ? '' : '（余额不足）'}</span> : null}
+              <Button variant="outlined" size="s" disabled={busy || !core.getKey()} onClick={() => void run(async () => { setBalance(await core.fetchBalance(true)) })}>查询余额</Button>
+            </div>
+          }
         />
-        <Row label="充值" description="前往 DeepSeek 官方充值页面" action={<Button variant="outlined" size="m" onClick={() => window.open('https://platform.deepseek.com/top_up', '_blank', 'noopener,noreferrer')}>前往充值</Button>} />
+        <Row label="充值" description="前往 DeepSeek 官方充值页面" action={<Button variant="outlined" size="s" onClick={() => window.open('https://platform.deepseek.com/top_up', '_blank', 'noopener,noreferrer')}>前往充值</Button>} />
       </Section>
 
       <Section title="系统提示词">
         <textarea className={styles.enhanceTextarea} rows={6} value={prompt} onChange={(event) => setPrompt(event.target.value)} placeholder="输入自定义系统提示词" />
         <Row label="启用自定义提示词" description="支持 {{memory}} 占位符；留空或关闭时使用官方默认提示词" action={<Toggle label="启用自定义提示词" checked={settings.systemEnabled} onChange={() => update({ systemEnabled: !settings.systemEnabled })} />} />
         <div className={styles.enhanceActions}>
-          <Button size="m" onClick={() => { update({ system: prompt }); showToast('系统提示词已保存') }}>保存提示词</Button>
-          <Button variant="outlined" size="m" onClick={() => { setPrompt(core.defaults.system); update({ system: core.defaults.system }); showToast('已恢复默认提示词') }}>恢复默认</Button>
+          <Button size="s" onClick={() => { update({ system: prompt }); showToast('系统提示词已保存') }}>保存提示词</Button>
+          <Button variant="outlined" size="s" onClick={() => { setPrompt(core.defaults.system); update({ system: core.defaults.system }); showToast('已恢复默认提示词') }}>恢复默认</Button>
         </div>
       </Section>
 
@@ -354,7 +356,7 @@ const EnhancementContent = ({ core }: { core: Core }) => {
         <Row label="注入常驻记忆" description="把这些手写的记忆放进系统提示词，每轮都会带上" action={<Toggle label="注入常驻记忆" checked={settings.memoryEnabled} onChange={() => update({ memoryEnabled: !settings.memoryEnabled })} />} />
         <div className={styles.enhanceMemoryAdd}>
           <input className={styles.enhanceInput} value={newMemory} onChange={(event) => setNewMemory(event.target.value)} placeholder="写一条长期有效的记忆" />
-          <Button variant="outlined" size="m" onClick={addMemory}>添加</Button>
+          <Button variant="outlined" size="s" onClick={addMemory}>添加</Button>
         </div>
         <div className={styles.enhanceMemoryList}>
           {settings.items.filter((item) => item.kind !== 'summary').map((item) => (
@@ -374,29 +376,29 @@ const EnhancementContent = ({ core }: { core: Core }) => {
         <Row label="回忆过去的聊天" description="按关键词 + 向量检索历史对话，把最相关的几轮塞进本轮上下文" action={<Toggle label="回忆过去的聊天" checked={settings.recallEnabled} onChange={() => update({ recallEnabled: !settings.recallEnabled })} />} />
         <Row label="每次召回" description="最多 3 轮（一问一答算一轮）" action={<input className={styles.enhanceNumber} type="number" min={1} max={3} step={1} value={settings.recallTopK} onChange={(event) => update({ recallTopK: Math.min(3, Math.max(1, Number(event.target.value) || 3)) })} />} />
         <div className={styles.enhanceActions}>
-          <Button variant="outlined" size="m" disabled={busy} onClick={() => void run(async () => { const n = await core.refreshRecall(true); showToast('已索引 ' + n + ' 轮对话') })}>重建回忆索引</Button>
+          <Button variant="outlined" size="s" disabled={busy} onClick={() => void run(async () => { const n = await core.refreshRecall(true); showToast('已索引 ' + n + ' 轮对话') })}>重建回忆索引</Button>
         </div>
-        <div className={styles.description}>{core.lastRecall && core.lastRecall.length ? '上次召回：' + core.lastRecall.length + ' 轮（' + core.lastRecall.map((r) => r.user.slice(0, 16)).join(' / ') + '）' : '发一条消息后，这里显示本轮召回了什么。'}</div>
+        {core.lastRecall && core.lastRecall.length ? <div className={styles.description}>上次召回：{core.lastRecall.length} 轮（{core.lastRecall.map((r) => r.user.slice(0, 16)).join(' / ')}）</div> : null}
       </Section>
 
       <Section title="上下文与用量">
         <Row label="自动压缩" description="上下文达到阈值时，把较早的对话压成摘要，只保留最近 6 条原文" action={<Toggle label="自动压缩" checked={settings.autoCompress} onChange={() => update({ autoCompress: !settings.autoCompress })} />} />
         <Row label="压缩阈值" description="8,000 – 128,000 tokens" action={<input className={styles.enhanceNumber} type="number" min={8000} max={128000} step={1000} value={settings.compressAt} onChange={(event) => update({ compressAt: Math.min(128000, Math.max(8000, Number(event.target.value) || 100000)) })} />} />
-        {usage ? <div className={styles.description}>当前上下文约 {usage.input + usage.cacheRead + usage.cacheWrite} tokens（输入 {usage.input} + 缓存 {usage.cacheRead}），阈值 {settings.compressAt.toLocaleString()}；{usage.input + usage.cacheRead + usage.cacheWrite >= settings.compressAt ? '已超阈值，下一轮自动压缩' : '未达阈值'}</div> : <div className={styles.description}>发送一条消息后，这里显示当前上下文大小（服务端计数）。</div>}
-        {usage ? <div className={styles.description}>最近用量：输入 {usage.input}，缓存命中 {usage.cacheRead}，输出 {usage.output}。</div> : <div className={styles.description}>发送一条消息后，这里会显示本轮用量。</div>}
+        {usage ? <div className={styles.description}>上下文约 {usage.input + usage.cacheRead + usage.cacheWrite} / {settings.compressAt.toLocaleString()} tokens</div> : null}
+        {usage ? <div className={styles.description}>本轮：输入 {usage.input} · 缓存 {usage.cacheRead} · 输出 {usage.output}</div> : null}
         <div className={styles.enhanceActions}>
-          <Button variant="outlined" size="m" disabled={busy} onClick={() => void run(async () => { const result = await core.compressNow(); showToast(`已将 ${result.compressed} 条消息压缩为摘要`) })}>立即压缩</Button>
-          <Button variant="outlined" size="m" onClick={() => { core.resetCompression(); update({ compressedHashes: [] }); showToast('已清除压缩标记') }}>清除压缩标记</Button>
+          <Button variant="outlined" size="s" disabled={busy} onClick={() => void run(async () => { const result = await core.compressNow(); showToast(`已将 ${result.compressed} 条消息压缩为摘要`) })}>立即压缩</Button>
+          <Button variant="outlined" size="s" onClick={() => { core.resetCompression(); update({ compressedHashes: [] }); showToast('已清除压缩标记') }}>清除压缩标记</Button>
         </div>
       </Section>
 
       <Section title="模型与风控">
         <div className={styles.enhanceMemoryAdd}>
           <input className={styles.enhanceInput} value={model} onChange={(event) => setModel(event.target.value)} spellCheck={false} />
-          <Button size="m" onClick={() => { const value = model.trim() || core.defaults.model; update({ model: value }); setModel(value); showToast(`已切换到 ${value}`) }}>保存模型</Button>
-        <div className={styles.description}>深度思考开启时用上方模型，默认 deepseek-flash；改成 deepseek-v4-pro 才会用 pro（更贵）。</div>
+          <Button size="s" onClick={() => { const value = model.trim() || core.defaults.model; update({ model: value }); setModel(value); showToast(`已切换到 ${value}`) }}>保存模型</Button>
         </div>
-        <Row label="可用模型" description={models.length ? models.join('、') : '从当前 API 服务拉取'} action={<Button variant="outlined" size="m" disabled={busy} onClick={() => void run(async () => { const result = await core.fetchModels(); setModels(result); showToast(`拉取到 ${result.length} 个模型`) })}>拉取模型</Button>} />
+        <Row label="可用模型" action={<Button variant="outlined" size="s" disabled={busy} onClick={() => void run(async () => { const result = await core.fetchModels(); setModels(result); showToast(`拉取到 ${result.length} 个模型`) })}>拉取模型</Button>} />
+        {models.length ? <div className={styles.description}>{models.join('、')}</div> : null}
 
         <Row label="深度思考关闭时" description="固定使用 deepseek-flash（省钱档），不可修改" action={<span className={styles.description}>deepseek-flash</span>} />
       </Section>
@@ -421,7 +423,7 @@ const EnhancementContent = ({ core }: { core: Core }) => {
             />
           }
         />
-        <Row label="开始语音通话" description="关闭设置后使用当前对话进行语音通话" action={<Button variant="outlined" size="m" onClick={() => { closeSettings(); setTimeout(() => window.__DSHV?.start(), 80) }}>开始通话</Button>} />
+        <Row label="开始语音通话" description="关闭设置后使用当前对话进行语音通话" action={<Button variant="outlined" size="s" onClick={() => { closeSettings(); setTimeout(() => window.__DSHV?.start(), 80) }}>开始通话</Button>} />
       </Section>
 
       <Section title="外观增强">
@@ -432,8 +434,8 @@ const EnhancementContent = ({ core }: { core: Core }) => {
           description="气泡和通话页共用，保存在本机"
           action={
             <div className={styles.enhanceActions}>
-              <Button variant="outlined" size="m" onClick={() => pickChatAvatar('assistant')}>上传</Button>
-              <Button variant="outlined" size="m" onClick={() => resetChatAvatar('assistant')}>默认</Button>
+              <Button variant="outlined" size="s" onClick={() => pickChatAvatar('assistant')}>上传</Button>
+              <Button variant="outlined" size="s" onClick={() => resetChatAvatar('assistant')}>默认</Button>
             </div>
           }
         />
@@ -442,8 +444,8 @@ const EnhancementContent = ({ core }: { core: Core }) => {
           description={avatarTick >= 0 && typeof localStorage !== 'undefined' && localStorage.getItem('dshx:user-avatar') ? '已自定义' : '默认显示“我”，可上传图片'}
           action={
             <div className={styles.enhanceActions}>
-              <Button variant="outlined" size="m" onClick={() => pickChatAvatar('user')}>上传</Button>
-              <Button variant="outlined" size="m" onClick={() => resetChatAvatar('user')}>默认</Button>
+              <Button variant="outlined" size="s" onClick={() => pickChatAvatar('user')}>上传</Button>
+              <Button variant="outlined" size="s" onClick={() => resetChatAvatar('user')}>默认</Button>
             </div>
           }
         />
@@ -455,11 +457,11 @@ const EnhancementContent = ({ core }: { core: Core }) => {
           description={appIcon ? '已使用自定义图片，保存在本机' : '默认显示 DChat 字母图标，可上传自己的图片'}
           action={
             <div className={styles.enhanceActions}>
-              <Button variant="outlined" size="m" onClick={pickAppIcon}>{appIcon ? '更换' : '上传图标'}</Button>
+              <Button variant="outlined" size="s" onClick={pickAppIcon}>{appIcon ? '更换' : '上传图标'}</Button>
               {appIcon ? (
                 <Button
                   variant="outlined"
-                  size="m"
+                  size="s"
                   onClick={() => {
                     if (setAppIcon('')) {
                       showToast('已恢复默认图标')
@@ -474,23 +476,22 @@ const EnhancementContent = ({ core }: { core: Core }) => {
             </div>
           }
         />
-        <Row label="聊天背景" description={background ? '已设置自定义背景图' : '使用默认背景'} action={<div className={styles.enhanceActions}><Button variant="outlined" size="m" onClick={pickBackground}>{background ? '更换' : '上传'}</Button>{background ? <Button variant="outlined" size="m" onClick={() => { core.setChatBg(''); setBackground('') }}>移除</Button> : null}</div>} />
+        <Row label="聊天背景" description={background ? '已设置自定义背景图' : '使用默认背景'} action={<div className={styles.enhanceActions}><Button variant="outlined" size="s" onClick={pickBackground}>{background ? '更换' : '上传'}</Button>{background ? <Button variant="outlined" size="s" onClick={() => { core.setChatBg(''); setBackground('') }}>移除</Button> : null}</div>} />
         <Row label="我的气泡颜色" action={<Select ariaLabel="我的气泡颜色" value={bubble} options={[{ value: '', label: '默认' }, { value: '#dbeafe', label: '雾蓝' }, { value: '#d9f2ff', label: '天蓝' }, { value: '#dcfce7', label: '薄荷' }, { value: '#fde2e4', label: '樱粉' }, { value: '#fef3c7', label: '奶黄' }, { value: '#ede9fe', label: '香芋' }, { value: '#e5e7eb', label: '浅灰' }, { value: '#111827', label: '墨黑' }]} onChange={(value) => { core.setBubbleColor(value); setBubble(value) }} />} />
         <label className={styles.enhanceCssLabel}>我的气泡 CSS<textarea className={styles.enhanceTextarea} rows={3} value={customCss} onChange={(event) => setCustomCss(event.target.value)} spellCheck={false} /></label>
-        <Button variant="outlined" size="m" onClick={() => { core.setCustomCss(customCss); showToast('我的气泡样式已应用') }}>应用我的气泡 CSS</Button>
+        <Button variant="outlined" size="s" onClick={() => { core.setCustomCss(customCss); showToast('我的气泡样式已应用') }}>应用我的气泡 CSS</Button>
         <label className={styles.enhanceCssLabel}>助手气泡 CSS<textarea className={styles.enhanceTextarea} rows={3} value={customCssAi} onChange={(event) => setCustomCssAi(event.target.value)} spellCheck={false} /></label>
         <div className={styles.enhanceActions}>
-          <Button variant="outlined" size="m" onClick={() => { core.setCustomCssAi(customCssAi); showToast('助手气泡样式已应用') }}>应用助手气泡 CSS</Button>
-          <Button variant="outlined" size="m" onClick={() => { core.setCustomCss(''); core.setCustomCssAi(''); setCustomCss(''); setCustomCssAi(''); showToast('自定义 CSS 已清空') }}>清空全部 CSS</Button>
+          <Button variant="outlined" size="s" onClick={() => { core.setCustomCssAi(customCssAi); showToast('助手气泡样式已应用') }}>应用助手气泡 CSS</Button>
+          <Button variant="outlined" size="s" onClick={() => { core.setCustomCss(''); core.setCustomCssAi(''); setCustomCss(''); setCustomCssAi(''); showToast('自定义 CSS 已清空') }}>清空全部 CSS</Button>
         </div>
       </Section>
 
       <Section title="增强设置备份">
         <div className={styles.description}>当前站点版本：{document.querySelector('meta[name="application-version"]')?.getAttribute('content') ?? '未知'}</div>
-        <div className={styles.description}>仅包含提示词、记忆、压缩状态和模型设置，不包含 API Key 或聊天记录。</div>
         <div className={styles.enhanceActions}>
-          <Button variant="outlined" size="m" onClick={() => downloadJson(core.getSettings(), 'deepseek-enhance-settings.json')}>导出增强设置</Button>
-          <Button variant="outlined" size="m" onClick={importSettings}>导入增强设置</Button>
+          <Button variant="outlined" size="s" onClick={() => downloadJson(core.getSettings(), 'deepseek-enhance-settings.json')}>导出增强设置</Button>
+          <Button variant="outlined" size="s" onClick={importSettings}>导入增强设置</Button>
         </div>
         </Section>
       </div>
