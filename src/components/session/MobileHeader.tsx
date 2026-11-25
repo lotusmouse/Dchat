@@ -21,6 +21,7 @@ export const MobileHeader = ({ title }: { title?: string }) => {
       {title === undefined ? <div className={styles.titleSpacer} /> : <div className={styles.title}>{title}</div>}
       <div className={styles.actions}>
         <IconButton
+          className={styles.actionButton}
           size="xl"
           tone="primary"
           icon={<IconNewChatOutline20 />}
