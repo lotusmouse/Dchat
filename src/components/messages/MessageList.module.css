@@ -1,31 +1,35 @@
 .container {
+  position: relative;
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+}
+
+.scroll {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
   overflow-y: auto;
+  overscroll-behavior-y: contain;
   scrollbar-gutter: stable both-edges;
   scrollbar-color: var(--scroll-color) transparent;
 }
 
-.scroll {
-  display: contents;
+.footer {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 10;
+  pointer-events: none;
 }
 
 @media not all and (min-width: 768px) {
-  .container {
-    overflow: hidden;
-    scrollbar-gutter: auto;
-  }
-
   .scroll {
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    min-height: 0;
-    overflow-y: auto;
-    overscroll-behavior-y: contain;
-    scrollbar-color: var(--scroll-color) transparent;
+    scrollbar-gutter: auto;
   }
 
   .column {
@@ -37,7 +41,7 @@
   width: calc(var(--message-list-max-width) - 2 * var(--message-list-padding-horizontal));
   max-width: calc(100% - 40px);
   margin: 0 auto;
-  padding-bottom: 24px;
+  padding-bottom: calc(var(--composer-inset, 160px) + 24px);
 }
 
 /* 历史消息折叠入口 */

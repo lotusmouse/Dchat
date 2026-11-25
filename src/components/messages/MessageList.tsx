@@ -47,6 +47,7 @@ export const MessageList = ({
   const isMobile = useIsMobile()
   const scrollRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
+  const footerRef = useRef<HTMLDivElement>(null)
   const stickyRef = useRef(true)
   const scrollTopRef = useRef(0)
   const restoreScrollRef = useRef<{ messageId: string; top: number } | null>(null)
@@ -82,6 +83,27 @@ export const MessageList = ({
     const observer = new ResizeObserver(scrollToBottom)
     observer.observe(content)
     observer.observe(scroll)
+    return () => observer.disconnect()
+  }, [isMobile, scrollToBottom])
+
+  // 悬浮输入框的高度实时转化为列表留白，最后一条消息始终能滚动到玻璃上方。
+  useLayoutEffect(() => {
+    const footer = footerRef.current
+    const scroll = scrollRef.current
+    if (!footer || !scroll) {
+      return
+    }
+    const updateInset = () => {
+      const inset = `${Math.ceil(footer.getBoundingClientRect().height)}px`
+      if (scroll.style.getPropertyValue('--composer-inset') !== inset) {
+        scroll.style.setProperty('--composer-inset', inset)
+        // padding 不属于 ResizeObserver 默认观测的 content-box，这里显式跟随底部。
+        scrollToBottom()
+      }
+    }
+    updateInset()
+    const observer = new ResizeObserver(updateInset)
+    observer.observe(footer)
     return () => observer.disconnect()
   }, [isMobile, scrollToBottom])
 
@@ -175,8 +197,8 @@ export const MessageList = ({
   const uploadRetryId = getUploadRetryId(messages, streaming)
   return (
     <ScrollToBottomContext.Provider value={scrollToBottom}>
-      <div ref={isMobile ? undefined : scrollRef} className={styles.container}>
-        <div ref={isMobile ? scrollRef : undefined} className={styles.scroll}>
+      <div className={styles.container}>
+        <div ref={scrollRef} className={styles.scroll}>
           <div ref={contentRef} className={styles.column}>
             {foldedCount > 0 ? (
               <button type="button" className={styles.fold} onClick={expandOlder}>
@@ -211,7 +233,9 @@ export const MessageList = ({
             )}
           </div>
         </div>
-        {footer}
+        <div ref={footerRef} className={styles.footer}>
+          {footer}
+        </div>
       </div>
     </ScrollToBottomContext.Provider>
   )

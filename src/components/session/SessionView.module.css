@@ -30,27 +30,24 @@
 }
 
 .inputContainer {
-  position: sticky;
-  bottom: 0;
-  z-index: 10;
   display: flex;
   flex-direction: column;
   align-items: center;
   box-sizing: border-box;
   width: calc(var(--message-list-max-width) - 64px);
   max-width: calc(100% - 32px);
-  margin: auto auto 0;
-  padding-top: 10px;
-  background: transparent;
+  margin: 0 auto;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom));
+  pointer-events: none;
+}
+
+.inputContainer > * {
+  pointer-events: auto;
 }
 
 @media not all and (min-width: 768px) {
   .inputContainer {
-    position: relative;
-    bottom: auto;
-    flex-shrink: 0;
-    margin: 0 auto;
-    padding-bottom: env(safe-area-inset-bottom);
-    background: transparent;
+    max-width: calc(100% - 24px);
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
   }
 }
