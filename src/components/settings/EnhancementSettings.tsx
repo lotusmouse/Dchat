@@ -106,6 +106,67 @@ const Toggle = ({ label, checked, onChange }: { label: string; checked: boolean;
   />
 )
 
+/** 数字输入先保留本地草稿，失焦或回车后再限制范围，允许清空并连续输入。 */
+const NumberDraftInput = ({
+  value,
+  min,
+  max,
+  step = 1,
+  ariaLabel,
+  onCommit,
+}: {
+  value: number
+  min: number
+  max: number
+  step?: number
+  ariaLabel: string
+  onCommit: (value: number) => void
+}) => {
+  const [draft, setDraft] = useState(String(value))
+  const editing = useRef(false)
+
+  useEffect(() => {
+    if (!editing.current) {
+      setDraft(String(value))
+    }
+  }, [value])
+
+  const commit = () => {
+    editing.current = false
+    const parsed = Number(draft)
+    if (!draft.trim() || !Number.isFinite(parsed)) {
+      setDraft(String(value))
+      return
+    }
+    const next = Math.min(max, Math.max(min, Math.round(parsed)))
+    setDraft(String(next))
+    if (next !== value) {
+      onCommit(next)
+    }
+  }
+
+  return (
+    <input
+      className={styles.enhanceNumber}
+      type="number"
+      aria-label={ariaLabel}
+      min={min}
+      max={max}
+      step={step}
+      value={draft}
+      onFocus={() => { editing.current = true }}
+      onChange={(event) => setDraft(event.target.value)}
+      onBlur={commit}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault()
+          event.currentTarget.blur()
+        }
+      }}
+    />
+  )
+}
+
 const errorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error))
 
 const downloadJson = (value: unknown, name: string) => {
@@ -458,7 +519,7 @@ const EnhancementContent = ({ core }: { core: Core }) => {
 
       <Section title="历史回忆">
         <Row label="回忆过去的聊天" description="按关键词 + 向量检索历史对话，把最相关的几轮塞进本轮上下文" action={<Toggle label="回忆过去的聊天" checked={settings.recallEnabled} onChange={() => update({ recallEnabled: !settings.recallEnabled })} />} />
-        <Row label="每次召回" description="最多 3 轮（一问一答算一轮）" action={<input className={styles.enhanceNumber} type="number" min={1} max={3} step={1} value={settings.recallTopK} onChange={(event) => update({ recallTopK: Math.min(3, Math.max(1, Number(event.target.value) || 3)) })} />} />
+        <Row label="每次召回" description="最多 3 轮（一问一答算一轮）" action={<NumberDraftInput ariaLabel="每次召回" min={1} max={3} value={settings.recallTopK} onCommit={(recallTopK) => update({ recallTopK })} />} />
         <div className={styles.enhanceActions}>
           <Button variant="outlined" size="s" disabled={busy} onClick={() => void run(async () => { const n = await core.refreshRecall(true); showToast('已索引 ' + n + ' 轮对话') })}>重建回忆索引</Button>
         </div>
@@ -467,7 +528,7 @@ const EnhancementContent = ({ core }: { core: Core }) => {
 
       <Section title="上下文与用量">
         <Row label="自动压缩" description="上下文达到阈值时，把较早的对话压成摘要，只保留最近 6 条原文" action={<Toggle label="自动压缩" checked={settings.autoCompress} onChange={() => update({ autoCompress: !settings.autoCompress })} />} />
-        <Row label="压缩阈值" description="8,000 – 128,000 tokens" action={<input className={styles.enhanceNumber} type="number" min={8000} max={128000} step={1000} value={settings.compressAt} onChange={(event) => update({ compressAt: Math.min(128000, Math.max(8000, Number(event.target.value) || 100000)) })} />} />
+        <Row label="压缩阈值" description="8,000 – 128,000 tokens" action={<NumberDraftInput ariaLabel="压缩阈值" min={8000} max={128000} step={1000} value={settings.compressAt} onCommit={(compressAt) => update({ compressAt })} />} />
         {contextTokens !== null ? <div className={styles.description}>上下文约 {contextTokens} / {settings.compressAt.toLocaleString()} tokens</div> : null}
         {usage ? <div className={styles.description}>本轮：输入 {usage.input} · 缓存 {usage.cacheRead} · 输出 {usage.output}</div> : null}
         <div className={styles.enhanceActions}>
@@ -577,14 +638,12 @@ const EnhancementContent = ({ core }: { core: Core }) => {
           label="聊天字号"
           action={
             <div className={styles.enhanceActions}>
-              <input
-                className={styles.enhanceNumber}
-                type="number"
-                aria-label="聊天字号"
+              <NumberDraftInput
+                ariaLabel="聊天字号"
                 min={12}
                 max={32}
                 value={fontSize}
-                onChange={(event) => setFontSize(setChatFontSize(event.target.valueAsNumber))}
+                onCommit={(value) => setFontSize(setChatFontSize(value))}
               />
               <span className={styles.enhanceFontUnit}>px</span>
               <Button variant="outlined" size="s" onClick={() => { resetChatFontSize(); setFontSize(getChatFontSize()) }}>默认</Button>
