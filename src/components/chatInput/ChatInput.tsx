@@ -155,6 +155,7 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
   return (
     <div
       className={clsx(styles.wrapper, sessionId === null ? styles.home : styles.session)}
+      data-dshx-chat-input
       onClick={(event) => {
         if (event.target === event.currentTarget) {
           textareaRef.current?.focus({ preventScroll: true })

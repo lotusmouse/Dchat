@@ -291,3 +291,30 @@ html[data-dshx-bg="1"] #root .bottom-_4cfe7,
 html[data-dshx-bg="1"] #root .bottom-e1faee {
   background: none !important;
 }
+
+/* 本地 TTF 字体：仅在有已验证并加载成功的字体时启用。 */
+html[data-dshx-font-family="1"] #root,
+html[data-dshx-font-family="1"] #root *,
+html[data-dshx-font-family="1"] #dshx-call,
+html[data-dshx-font-family="1"] #dshx-call * {
+  font-family: DChatLocalTTF, -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif !important;
+}
+
+/* 字号与颜色只覆盖聊天正文和输入文字，不改变设置页、按钮及标题的尺寸。 */
+html[data-dshx-font-size="1"] #root .ds-markdown,
+html[data-dshx-font-size="1"] #root [data-dshx-bubble] {
+  font-size: var(--dshx-chat-font-size) !important;
+  line-height: 1.5 !important;
+}
+
+html[data-dshx-font-size="1"] #root [data-dshx-chat-input] {
+  --line-height: calc(var(--dshx-chat-font-size) * 1.5);
+  font-size: var(--dshx-chat-font-size);
+}
+
+html[data-dshx-font-color="1"] #root .ds-markdown,
+html[data-dshx-font-color="1"] #root [data-dshx-bubble],
+html[data-dshx-font-color="1"] #root [data-dshx-chat-input],
+html[data-dshx-font-color="1"] #root [data-dshx-chat-input] textarea {
+  color: var(--dshx-chat-font-color) !important;
+}

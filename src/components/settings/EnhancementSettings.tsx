@@ -2,6 +2,17 @@ import clsx from 'clsx'
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { enhancementCore, type EnhancementMemoryItem, type EnhancementSettings as Settings } from '../../services/enhancement.js'
 import { setAppIcon, useAppIcon } from '../../services/appIcon.js'
+import {
+  getChatFontColor,
+  getChatFontSize,
+  removeChatFont,
+  resetChatFontColor,
+  resetChatFontSize,
+  setChatFontColor,
+  setChatFontSize,
+  uploadChatFont,
+  useChatFontName,
+} from '../../services/chatFont.js'
 import { Button } from '../base/Button.js'
 import { Select } from '../base/Select.js'
 import { showToast } from '../base/toastState.js'
@@ -134,6 +145,9 @@ const EnhancementContent = ({ core }: { core: Core }) => {
   })
   const [balance, setBalance] = useState(core.lastBalance)
   const appIcon = useAppIcon()
+  const fontName = useChatFontName()
+  const [fontSize, setFontSize] = useState(getChatFontSize)
+  const [fontColor, setFontColor] = useState(getChatFontColor)
 
   useEffect(() => {
     contentRef.current?.parentElement?.scrollTo({ top: 0 })
@@ -319,6 +333,23 @@ const EnhancementContent = ({ core }: { core: Core }) => {
     window.dispatchEvent(new CustomEvent('dshx:avatar'))
     setAvatarTick((value) => value + 1)
     showToast('已恢复默认头像')
+  }
+
+  const pickChatFont = () => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = '.ttf,font/ttf'
+    input.onchange = () => {
+      const file = input.files?.[0]
+      if (!file) {
+        return
+      }
+      void run(async () => {
+        await uploadChatFont(file)
+        showToast(`已应用字体：${file.name}`)
+      })
+    }
+    input.click()
   }
 
   const pickAppIcon = () => {
@@ -530,6 +561,51 @@ const EnhancementContent = ({ core }: { core: Core }) => {
           }
         />
         <Row label="聊天背景" description={background ? '已设置自定义背景图' : '使用默认背景'} action={<div className={styles.enhanceActions}><Button variant="outlined" size="s" onClick={pickBackground}>{background ? '更换' : '上传'}</Button>{background ? <Button variant="outlined" size="s" onClick={() => { core.setChatBg(''); setBackground('') }}>移除</Button> : null}</div>} />
+        <Row
+          label="本地 TTF 字体"
+          action={
+            <div className={styles.enhanceFontControl}>
+              {fontName ? <span className={styles.enhanceFontName} title={fontName}>{fontName}</span> : null}
+              <div className={styles.enhanceActions}>
+                <Button variant="outlined" size="s" disabled={busy} onClick={pickChatFont}>{fontName ? '更换' : '上传'}</Button>
+                {fontName ? <Button variant="outlined" size="s" disabled={busy} onClick={() => void run(async () => { await removeChatFont(); showToast('已恢复默认字体') })}>默认</Button> : null}
+              </div>
+            </div>
+          }
+        />
+        <Row
+          label="聊天字号"
+          action={
+            <div className={styles.enhanceActions}>
+              <input
+                className={styles.enhanceNumber}
+                type="number"
+                aria-label="聊天字号"
+                min={12}
+                max={32}
+                value={fontSize}
+                onChange={(event) => setFontSize(setChatFontSize(event.target.valueAsNumber))}
+              />
+              <span className={styles.enhanceFontUnit}>px</span>
+              <Button variant="outlined" size="s" onClick={() => { resetChatFontSize(); setFontSize(getChatFontSize()) }}>默认</Button>
+            </div>
+          }
+        />
+        <Row
+          label="聊天文字颜色"
+          action={
+            <div className={styles.enhanceActions}>
+              <input
+                className={styles.enhanceColorInput}
+                type="color"
+                aria-label="聊天文字颜色"
+                value={fontColor}
+                onChange={(event) => { setChatFontColor(event.target.value); setFontColor(event.target.value) }}
+              />
+              <Button variant="outlined" size="s" onClick={() => { resetChatFontColor(); setFontColor(getChatFontColor()) }}>默认</Button>
+            </div>
+          }
+        />
         <Row label="我的气泡颜色" action={<Select ariaLabel="我的气泡颜色" className={styles.bubbleColorSelect} value={bubble} options={[{ value: '', label: '默认' }, { value: '#dbeafe', label: '雾蓝' }, { value: '#d9f2ff', label: '天蓝' }, { value: '#dcfce7', label: '薄荷' }, { value: '#fde2e4', label: '樱粉' }, { value: '#fef3c7', label: '奶黄' }, { value: '#ede9fe', label: '香芋' }, { value: '#e5e7eb', label: '浅灰' }, { value: '#111827', label: '墨黑' }]} onChange={(value) => { core.setBubbleColor(value); setBubble(value) }} />} />
         <Row
           label="气泡预设"

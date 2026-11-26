@@ -590,6 +590,55 @@
   padding: 4px 8px;
 }
 
+.enhanceColorInput {
+  box-sizing: border-box;
+  width: 42px;
+  height: 32px;
+  padding: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+
+  [data-ds-dark-theme] & {
+    border-color: rgba(255, 255, 255, 0.18);
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--dsw-alias-brand-primary);
+    outline-offset: 2px;
+  }
+}
+
+.enhanceFontControl {
+  display: flex;
+  min-width: 0;
+  max-width: 220px;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.enhanceFontControl .enhanceActions {
+  margin: 0;
+}
+
+.enhanceFontName {
+  max-width: 200px;
+  overflow: hidden;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  line-height: 16px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.enhanceFontUnit {
+  color: var(--dsw-alias-label-secondary);
+  font-size: 13px;
+}
+
 .enhanceTextarea {
   display: block;
   width: 100%;

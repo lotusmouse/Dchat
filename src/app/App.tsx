@@ -19,6 +19,7 @@ import { SettingsDialog } from '../components/settings/SettingsDialog.js'
 import { Toast } from '../components/base/Toast.js'
 import { showToast } from '../components/base/toastState.js'
 import { onUploadNotice } from '../services/attachments.js'
+import { initChatFont } from '../services/chatFont.js'
 import { Button } from '../components/base/Button.js'
 import { stopReadAloud } from '../services/speech/readAloud.js'
 import { CollapsedSider } from '../components/sider/CollapsedSider.js'
@@ -56,6 +57,10 @@ export const App = () => {
     document.documentElement.lang = locale
   }, [locale])
 
+  // 本地字体及聊天字号、颜色在启动时恢复，不依赖打开设置页。
+  useEffect(() => {
+    void initChatFont()
+  }, [])
   // 文件数、存储空间达到上限时，附件上只显示「上传失败」，原因用 toast 说明
   useEffect(() => onUploadNotice(showToast), [])
   // 语音等静态增强模块统一复用官方轻提示，不再依赖独立设置页转发。
