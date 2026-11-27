@@ -5,8 +5,8 @@ import { IconButton } from '../base/IconButton.js'
 import { openMobileSider } from '../sider/mobileSiderState.js'
 import styles from './MobileHeader.module.css'
 
-/** 移动端顶栏：圆形菜单按钮，右侧通话与新对话共用原生按钮组。 */
-export const MobileHeader = ({ title }: { title?: string }) => {
+/** 移动端顶栏：不显示标题，只保留菜单以及右侧通话、新对话按钮。 */
+export const MobileHeader = () => {
   const t = useTranslate()
   return (
     <div className={styles.header}>
@@ -18,7 +18,7 @@ export const MobileHeader = ({ title }: { title?: string }) => {
         aria-label={t('expandSiderbarButton')}
         onClick={openMobileSider}
       />
-      {title === undefined ? <div className={styles.titleSpacer} /> : <div className={styles.title}>{title}</div>}
+      <div className={styles.titleSpacer} />
       <div className={styles.actions}>
         <IconButton
           className={styles.actionButton}
